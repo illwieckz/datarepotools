@@ -1,0 +1,50 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+if [ "${1}" = '-q' ]
+then
+	exec 1>/dev/null
+	exec 2>/dev/null
+	shift
+fi
+
+md3_file="${1}"
+
+if [ -z "${TMPDIR}" ]
+then
+	temp_dir="$(mktemp -d "/tmp/md32iqe-XXXXXXXX}")"
+else
+	temp_dir="$(mktemp -d "${TMPDIR}/md32iqe-XXXXXXXX")"
+fi
+
+[ -z "${md3_file}" ] && exit
+[ ! -f "${md3_file}" ] && exit
+
+temp_obj="$(mktemp "${temp_dir}/md32iqe-XXXXXXXX.obj")"
+temp_mtl="${temp_obj}.mtl"
+
+iqm_file="$(echo "${md3_file}" | sed -e 's/\.md3$/.iqm/')";
+
+assimp export "${md3_file}" "${temp_obj}"
+
+if [ -f "${temp_mtl}" ]
+then
+	echo "Warning: material are not exported, you must redo them by hand:"
+	grep '^map_Kd ' "${temp_mtl}"
+	rm "${temp_mtl}"
+fi
+
+iqm	"${iqm_file}" "${temp_obj}" >/dev/null
+
+touch --reference="${md3_file}" "${iqm_file}"
+rm "${md3_file}"
+
+rm "${temp_obj}"
+rmdir "${temp_dir}"
+
+#EOF

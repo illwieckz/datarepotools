@@ -1,0 +1,25 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+if [ "${1}" = '-q' ]
+then
+	exec 1>/dev/null
+	exec 2>/dev/null
+	shift
+fi
+
+file_name="${1}"
+
+[ -z "${file_name}" ] && exit
+[ ! -f "${file_name}" ] && exit
+
+next="$(echo "${file_name}" | sed -e 's/\.wav$/.flac/')"
+flac -8 "${file_name}"
+[ -e "${next}" ] && rm -v "${file_name}"
+
+#EOF

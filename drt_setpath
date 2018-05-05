@@ -1,0 +1,11 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+printf "export PATH=${PATH}:$(dirname "$(realpath "${0}")")"
+
+#EOF

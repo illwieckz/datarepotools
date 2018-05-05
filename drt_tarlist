@@ -1,0 +1,20 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+listArchive () {
+	tar -tf "${1}" \
+	| sed -e "s|^|${1}: |" \
+	| sort
+}
+
+for archive_file in ${@}
+do
+	listArchive "${archive_file}"
+done
+
+#EOF

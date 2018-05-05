@@ -1,0 +1,81 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+if [ "${1}" = '-q' ]
+then
+	exec 1>/dev/null
+	exec 2>/dev/null
+	shift
+fi
+
+force_conversion='false'
+if [ "${1}" = '-f' ]
+then
+	force_conversion='true'
+	shift
+fi
+
+keep_original='false'
+if [ "${1}" = '-k' ]
+then
+	keep_original='true'
+	shift
+fi
+
+file_name="${1}"
+
+if [ -z "${TMPDIR}" ]
+then
+	temp_dir="$(mktemp -d "/tmp/crunch2crunch-XXXXXXXX}")"
+else
+	temp_dir="$(mktemp -d "${TMPDIR}/crunch2crunch-XXXXXXXX")"
+fi
+
+[ -z "${file_name}" ] && exit
+[ ! -f "${file_name}" ] && exit
+
+_crunch2crunch () {
+	orig_file="${1}"
+
+	normal='false'
+	for suffix in _n _norm _normal _N _N_A
+	do
+		if echo "${orig_file}" | grep -q "${suffix}.crn$"
+		then
+			normal='true'
+		fi
+	done
+
+	temp_file="$(mktemp "${temp_dir}/blob-XXXXXXXX.tga")"
+
+	crunch-unvanquished -file ${orig_file} -out ${temp_file} >/dev/null 2>&1
+	touch -r "${orig_file}" "${temp_file}"
+
+	if ${normal}
+	then
+		echo "normal: ${file_name}"
+		# -renormalize -rtopmip already done ? but twice does not degrade it, be safe
+		crunch-unity -file ${temp_file} -dxn -renormalize -rtopmip -quality 255 -out ${orig_file} >/dev/null 2>&1
+	else
+		echo "standard: ${file_name}"
+		crunch-unity -file ${temp_file} -quality 255 -out ${orig_file} >/dev/null 2>&1
+	fi
+
+	touch -r "${temp_file}" "${orig_file}"
+	rm "${temp_file}"
+}
+
+
+if echo "${file_name}" | grep -q '\.crn$'
+then
+	_crunch2crunch "${file_name}"
+fi
+
+rmdir "${temp_dir}"
+
+#EOF

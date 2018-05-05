@@ -1,0 +1,16 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+[ -z "${1}" ] && exit
+
+n="$(echo "${1}" | sed -e 's/\.svgz$/.svg/')"
+cat "${1}" | gzip -d > "${n}"
+touch -r "${1}" "${n}"
+rm "${1}"
+
+#EOF

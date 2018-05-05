@@ -1,0 +1,53 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+[ -z "${1}" ] && exit
+
+dir="${1}"
+
+iqm="${HOME}/dev/iqm/iqm"
+
+(
+	printf '%s' "${iqm}"
+
+	name="$(basename "$(realpath "${dir}")")";
+
+	printf ' %s.iqm' "${name}"
+
+	for mesh in $(ls *.md5mesh | sed -e 's/\.md5mesh//')
+	do
+		for format in iqe md5mesh
+		do
+			if [ -f "${mesh}.${format}" ]
+			then
+				printf ' %s.%s' "${mesh}" "${format}"
+				break
+			fi
+		done
+	done
+
+	filter='^idle$\|^stand$'
+
+	for anim in $(ls *.md5anim | sed -e 's/\.md5anim//' | sort | grep "${filter}")
+	do
+		printf ' --name %s %s.md5anim' "${anim}" "${anim}"
+	done
+
+	for anim in $(ls *.md5anim | sed -e 's/\.md5anim//' | sort | grep -v "${filter}")
+	do
+		printf ' --name %s %s.md5anim' "${anim}" "${anim}"
+	done
+
+	printf '\n'
+
+	printf 'iqm2iqe %s.iqm' "${name}"
+
+	printf '\n'
+) | sh -x
+
+#EOF

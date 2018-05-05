@@ -1,0 +1,24 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+listArchive () {
+	7z l "${1}" \
+	| head -n -2 \
+	| grep '^[0-9][0-9][0-9][0-9]-[0-9]' \
+	| grep -v ' D\.\.\.\. ' \
+	| awk '{ print $6 }' \
+	| sed -e "s|^|${1}: |" \
+	| sort
+}
+
+for archive_file in ${@}
+do
+	listArchive "${archive_file}"
+done
+
+#EOF

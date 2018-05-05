@@ -1,0 +1,54 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+if [ "${1}" = '-q' ]
+then
+	exec 1>/dev/null
+	exec 2>/dev/null
+	shift
+fi
+
+file_name="${1}"
+
+if [ -z "${TMPDIR}" ]
+then
+	temp_dir="$(mktemp -d "/tmp/xcfz-XXXXXXXX}")"
+else
+	temp_dir="$(mktemp -d "${TMPDIR}/xcfz-XXXXXXXX")"
+fi
+
+[ -z "${file_name}" ] && exit
+[ ! -f "${file_name}" ] && exit
+
+_testfmt () {
+	file -b "${1}" | grep -q "${2}"
+}
+
+echo "${file_name}"
+
+if _testfmt "${file_name}" 'GIMP XCF image data'
+then
+	temp_file="$(mktemp "${temp_dir}/xcfz-XXXXXXXX.bzip2")"
+	cat "${file_name}" | bzip2 -9 > "${temp_file}"
+	touch -r "${file_name}" "${temp_file}"
+	mv "${temp_file}" "${file_name}"
+elif _testfmt "${file_name}" 'gzip compressed data'
+then
+	temp_file="$(mktemp "${temp_dir}/xcfz-XXXXXXXX.bzip2")"
+	cat "${file_name}" | gzip -d | bzip2 -9 > "${temp_file}"
+	touch -r "${file_name}" "${temp_file}"
+	mv "${temp_file}" "${file_name}"
+elif _testfmt "${file_name}" 'bzip2 compressed data'
+then
+	# do nothing
+	printf ''
+fi
+
+rmdir "${temp_dir}"
+
+#EOF

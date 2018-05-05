@@ -1,0 +1,127 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+_error () {
+	printf 'ERROR: %s\n' "${1}" >&2
+	exit 1
+}
+
+_help () {
+	tab="$(printf '\t')"
+	basename="$(basename "${0}")"
+
+	cat <<-EOF
+	${basename}: rewrite git tree optimizing for file format and compression
+
+	USAGE: ${basename} ref
+
+	ref:
+	${tab}reference
+	${tab}${tab}optimize and rewrite the tree since this reference (not included)
+
+	${tab}--all
+	${tab}${tab}optimize and rewrite the whole tree including all branches
+	
+	EOF
+
+	exit 0
+}
+
+if ! [ -x "`which git`" ]
+then
+	_error 'git not installed'
+fi
+
+if ! [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = 'true' ]
+then
+	_error 'not within git repository'
+fi
+
+if ! [ "$(git status --short 2>/dev/null)" = '' ]
+then
+	_error 'repository has untracked or unstaged files, please commit changes first'
+fi
+
+if ! [ "$(git diff --shortstat 2>/dev/null | tail -n1)" = '' ]
+then
+	_error 'repository is dirty, please commit changes first'
+fi
+
+if [ -z "${1}" ]
+then
+	_help
+else
+	if [ "${1}" = '-h' -o "${1}]" = '--help' ]
+	then
+		_help
+	elif [ "${1}" = '--all' ]
+	then
+		git_ref="${1}"
+	else
+		git_ref="${1}..HEAD"
+	fi
+	shift
+fi
+
+if [ -z "${TMPDIR}" ]
+then
+	temp_dir="$(mktemp -d "/tmp/drt_gitreblob-XXXXXXXX}")"
+else
+	temp_dir="$(mktemp -d "${TMPDIR}/drt_gitreblob-XXXXXXXX")"
+fi
+
+echo "rewriting tree converting blob to png"
+filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][mM][pP]' '*.[tT][gG][aA]' '*.[wW][eE][bB][pP]' | xargs -0 -P"$(nproc)" -n1 drt_blobtopng -q" --tag-name-filter cat -- "${git_ref}"
+[ -d "${filter_dir}" ] && rm -R "${filter_dir}"
+
+echo "exporting png from tree"
+export_dir="$(mktemp -d "${temp_dir}/export-XXXXXXXX")"
+filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
+# must be sequential to avoid collisions since multiples similar files are stored under the same name (deduplication)
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[pP][nN][gG]' | xargs -0 -P1 -n1 drt_pngexport '${export_dir}'" --tag-name-filter cat -- "${git_ref}"
+[ -d "${filter_dir}" ] && rm -R "${filter_dir}"
+
+echo "bruteforcing exported png"
+# let some cores available for the detection part, but ensure there is always more than 1 parallel tasks to let the next file loading while another is taking a nap
+find "${export_dir}/" -type f -a -iname '*.png' -print0 | xargs -0 "-P$(($(nproc) / 4 + 1))" -n1 drt_pngbrute -q
+
+[ -d "${export_dir}" ] && rm -R "${export_dir}"
+
+echo "rewriting tree with bruteforced png"
+filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[pP][nN][gG]' | xargs -0 -P"$(nproc)" -n1 drt_pngbrute -q" --tag-name-filter cat -- "${git_ref}"
+[ -d "${filter_dir}" ] && rm -R "${filter_dir}"
+
+echo "rewriting tree bzip2ing xcf"
+filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[xX][cC][fF]' | xargs -0 -P"$(nproc)" -n1 drt_xcfbrute -q" --tag-name-filter cat -- "${git_ref}"
+[ -d "${filter_dir}" ] && rm -R "${filter_dir}"
+
+echo "rewriting tree reflacing flac"
+filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[wW][aA][vV]' | xargs -0 -P"$(nproc)" -n1 drt_flacbrute -q" --tag-name-filter cat -- "${git_ref}"
+[ -d "${filter_dir}" ] && rm -R "${filter_dir}"
+
+echo "rewriting tree flacing wav"
+filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[wW][aA][vV]' | xargs -0 -P"$(nproc)" -n1 drt_wavtoflac -q" --tag-name-filter cat -- "${git_ref}"
+[ -d "${filter_dir}" ] && rm -R "${filter_dir}"
+
+echo "rewriting tree denumberizing map"
+filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[mM][aA][pP]'| xargs -0 -P"$(nproc)" -n1 drt_mapdenum -q" --tag-name-filter cat -- "${git_ref}"
+[ -d "${filter_dir}" ] && rm -R "${filter_dir}"
+
+echo "garbage collecting, pruning"
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+
+rmdir "${temp_dir}"
+
+#EOF

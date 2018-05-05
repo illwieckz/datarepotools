@@ -1,0 +1,55 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+if [ "${1}" = '-q' ]
+then
+	exec 1>/dev/null
+	exec 2>/dev/null
+	shift
+fi
+
+file_name="${1}"
+
+[ -z "${file_name}" ] && exit
+[ ! -f "${file_name}" ] && exit
+
+isSmaller () {
+	size1="$(stat -c%s "${1}")"
+	size2="$(stat -c%s "${2}")"
+
+	[ "${size1}" -lt "${size2}" ]
+	true
+}
+
+getSum () {
+	sha512sum "${1}" | cut -f1 -d' '
+}
+
+temp_dir="${TMPDIR:-/tmp}"
+cache_dir="${HOME}/.cache/pngbrute"
+temp_dir="$(mktemp -d "${temp_dir}/pngbrute-XXXXXXXX")"
+temp_file="$(mktemp "${temp_dir}/png-XXXXXXXX.png")"
+rgba_file="$(mktemp "${temp_dir}/rgba-XXXXXXXX.rgba")"
+
+mkdir -p "${cache_dir}"
+echo "= PNGREF ========= ${file_name}"
+
+mkdir -p "${cache_dir}"
+
+cp "${file_name}" "${temp_file}"
+optipng -o 0 -strip all "${temp_file}" "${temp_file}"
+convert "${temp_file}" "${rgba_file}"
+file_sum="${cache_dir}/$(getSum "${rgba_file}")"
+
+cp --reflink "${file_name}" "${file_sum}"
+
+rm "${temp_file}"
+rm "${rgba_file}"
+rmdir "${temp_dir}"
+
+#EOF

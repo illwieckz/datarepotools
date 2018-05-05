@@ -1,0 +1,43 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+if [ "${1}" = '-q' ]
+then
+	exec 1>/dev/null
+	exec 2>/dev/null
+	shift
+fi
+
+iqe_file="${1}"
+
+#if [ -z "${TMPDIR}" ]
+#then
+#	temp_dir="$(mktemp -d "/tmp/iqe2iqm-XXXXXXXX}")"
+#else
+#	temp_dir="$(mktemp -d "${TMPDIR}/iqe2iqm-XXXXXXXX")"
+#fi
+
+[ -z "${iqe_file}" ] && exit
+[ ! -f "${iqe_file}" ] && exit
+
+#temp_iqm="$(mktemp "${temp_dir}/iqe2iqm-XXXXXXXX.iqm")"
+#temp_iqe="$(mktemp "${temp_dir}/iqe2iqm-XXXXXXXX.iqe")"
+
+iqm_file="$(echo "${iqe_file}" | sed -e 's/\.iqe$/.iqm/')";
+
+iqm "${iqm_file}" "${iqe_file}"
+#iqm	"${temp_iqm}" "${temp_iqe}" >/dev/null
+#iqm_to_iqe.py "${temp_iqm}" > "${iqe_file}"
+touch --reference="${iqe_file}" "${iqm_file}"
+#rm "${iqm_file}"
+
+#rm "${temp_iqm}"
+#rm "${temp_iqe}"
+#rmdir "${temp_dir}"
+
+#EOF

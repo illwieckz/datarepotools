@@ -1,0 +1,62 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+file_name="${1}"
+
+_testfmt () {
+	file -b "${1}" | grep -q "${2}"
+}
+
+[ -z "${file_name}" ] && exit
+[ ! -f "${file_name}" ] && exit
+
+if [ -z "${TMPDIR}" ]
+then
+	temp_dir="$(mktemp -d "/tmp/gzblend-XXXXXXXX}")"
+else
+	temp_dir="$(mktemp -d "${TMPDIR}/gzblend-XXXXXXXX")"
+fi
+
+_recompress () {
+	echo "recompress: ${1}"
+	temp_file="$(mktemp "${temp_dir}/file-XXXXXXXX.blend.gz")"
+	cat "${1}" | gzip -d | gzip -9 > "${temp_file}"
+	file_size="$(du -b "${1}" | cut -f 1)"
+	temp_size="$(du -b "${temp_file}" | cut -f 1)"
+	if [ "${temp_size}" -lt "${file_size}" ]
+	then
+		touch -r "${1}" "${temp_file}"
+		mv "${temp_file}" "${1}"
+	else
+		echo "keep: ${1}"
+		rm "${temp_file}"
+	fi
+}
+
+_compress () {
+	echo "compress: ${1}"
+	temp_file="$(mktemp "${temp_dir}/file-XXXXXXXX.blend.gz")"
+	cat "${1}" | gzip -9 > "${temp_file}"
+	touch -r "${1}" "${temp_file}"
+	mv "${temp_file}" "${1}"
+}
+
+if _testfmt "${file_name}" 'gzip compressed data'
+then
+	_recompress "${file_name}"
+elif _testfmt "${file_name}" 'Blender3D'
+then
+	_compress "${file_name}"
+else
+	echo "not a blender file: ${file_name}"
+	exit
+fi
+
+rmdir "${temp_dir}"
+
+#EOF
