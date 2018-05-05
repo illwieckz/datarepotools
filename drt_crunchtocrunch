@@ -53,17 +53,17 @@ _crunch2crunch () {
 
 	temp_file="$(mktemp "${temp_dir}/blob-XXXXXXXX.tga")"
 
-	crunch-unvanquished -file ${orig_file} -out ${temp_file} >/dev/null 2>&1
+	crunch-binomial -file ${orig_file} -out ${temp_file} >/dev/null 2>&1
 	touch -r "${orig_file}" "${temp_file}"
 
 	if ${normal}
 	then
 		echo "normal: ${file_name}"
 		# -renormalize -rtopmip already done ? but twice does not degrade it, be safe
-		crunch-unity -file ${temp_file} -dxn -renormalize -rtopmip -quality 255 -out ${orig_file} >/dev/null 2>&1
+		crunch -file ${temp_file} -dxn -renormalize -rtopmip -quality 255 -out ${orig_file} >/dev/null 2>&1
 	else
 		echo "standard: ${file_name}"
-		crunch-unity -file ${temp_file} -quality 255 -out ${orig_file} >/dev/null 2>&1
+		crunch -file ${temp_file} -quality 255 -out ${orig_file} >/dev/null 2>&1
 	fi
 
 	touch -r "${temp_file}" "${orig_file}"
