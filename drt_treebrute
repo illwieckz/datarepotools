@@ -6,11 +6,6 @@
 # License: ISC
 # 
 
-_error () {
-	printf 'ERROR: %s\n' "${1}" >&2
-	exit 1
-}
-
 _help () {
 	tab="$(printf '\t')"
 	basename="$(basename "${0}")"
@@ -29,28 +24,10 @@ _help () {
 	
 	EOF
 
-	exit 0
+	exit
 }
 
-if ! [ -x "`which git`" ]
-then
-	_error 'git not installed'
-fi
-
-if ! [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = 'true' ]
-then
-	_error 'not within git repository'
-fi
-
-if ! [ "$(git status --short 2>/dev/null)" = '' ]
-then
-	_error 'repository has untracked or unstaged files, please commit changes first'
-fi
-
-if ! [ "$(git diff --shortstat 2>/dev/null | tail -n1)" = '' ]
-then
-	_error 'repository is dirty, please commit changes first'
-fi
+drt_gittest || exit "${?}"
 
 if [ -z "${1}" ]
 then
@@ -70,9 +47,9 @@ fi
 
 if [ -z "${TMPDIR}" ]
 then
-	temp_dir="$(mktemp -d "/tmp/drt_gitreblob-XXXXXXXX}")"
+	temp_dir="$(mktemp -d "/tmp/drt_treebrute-XXXXXXXX}")"
 else
-	temp_dir="$(mktemp -d "${TMPDIR}/drt_gitreblob-XXXXXXXX")"
+	temp_dir="$(mktemp -d "${TMPDIR}/drt_treebrute-XXXXXXXX")"
 fi
 
 echo "rewriting tree converting blob to png"

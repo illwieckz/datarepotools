@@ -1,0 +1,40 @@
+#! /bin/sh
+
+if [ -z "${1}" ]
+then
+	repo='.'
+else
+	repo="${1}"
+fi
+
+if [ -z "${TMPDIR}" ]
+then
+	temp_dir="$(mktemp -d "/tmp/drt_gitbrute-XXXXXXXX}")"
+else
+	temp_dir="$(mktemp -d "${TMPDIR}/drt_gitbrute-XXXXXXXX")"
+fi
+
+repo_dir="$(realpath "${repo}")"
+
+! [ -d "${repo_dir}" ] && exit 1
+
+cd "${repo_dir}"
+
+drt_gittest || exit "${?}"
+
+printf '=== regitting %s\n' "${repo_dir}"
+
+cd "${temp_dir}"
+
+git init
+git pull --tags "${repo_dir}" master
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+
+rm -Rf "${repo_dir}/.git"
+rm -R "${repo_dir}"
+
+mv -v "${temp_dir}" "${repo_dir}"
+printf '\n'
+
+#EOF

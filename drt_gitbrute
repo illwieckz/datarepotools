@@ -1,0 +1,25 @@
+#! /bin/sh
+
+if [ -z "${1}" ]
+then
+	repo='.'
+else
+	repo="${1}"
+fi
+
+repo_dir="$(realpath "${repo}")"
+
+! [ -d "${repo_dir}" ] && exit 1
+
+cd "${repo_dir}"
+
+drt_gittest || exit "${?}"
+
+printf '=== compressing %s\n' "${repo_dir}"
+
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+
+printf '\n'
+
+#EOF
