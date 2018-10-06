@@ -55,7 +55,7 @@ _convert () {
 
 _blob2png () {
 	orig_file="${1}"
-	newname="$(echo "${orig_file}" | sed -e 's/\.webp$/.png/;s/\.tga/.png/')"
+	newname="$(echo "${orig_file}" | sed -e 's/\.webp$/.png/;s/\.tga/.png/;s/\.bmp$/.png/')"
 	temp_file="$(mktemp "${temp_dir}/blob-XXXXXXXX.png")"
 	
 	do_convert='false'
@@ -96,6 +96,9 @@ _testfmt () {
 echo "${file_name}"
 
 if _testfmt "${file_name}" 'Web/P image'
+then
+	_blob2png "${file_name}"
+elif _testfmt "${file_name}" 'PC bitmap'
 then
 	_blob2png "${file_name}"
 elif _testfmt "${file_name}" 'Targa image data'

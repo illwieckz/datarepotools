@@ -38,6 +38,7 @@ then
 	mv "${temp_flac}" "${file_name}"
 fi
 
+rm "${temp_file}"
 rmdir "${temp_dir}"
 
 #EOF

@@ -40,7 +40,6 @@ fi
 cache_basepath="pngbrute";
 cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/${cache_basepath}";
 
-temp_dir="$(mktemp -d "${temp_dir}/pngbrute-XXXXXXXX")"
 temp_file="$(mktemp "${temp_dir}/png-XXXXXXXX.png")"
 rgba_file="$(mktemp "${temp_dir}/rgba-XXXXXXXX.rgba")"
 
