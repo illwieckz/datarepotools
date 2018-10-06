@@ -13,7 +13,7 @@ repo_dir="$(realpath "${repo}")"
 
 cd "${repo_dir}"
 
-drt_gittest || exit "${?}"
+drt-gittest || exit "${?}"
 
 printf '=== compressing %s\n' "${repo_dir}"
 

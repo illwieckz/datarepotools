@@ -32,9 +32,9 @@ getSum () {
 
 if [ -z "${TMPDIR}" ]
 then
-	temp_dir="$(mktemp -d "/tmp/drt_pngref-XXXXXXXX}")"
+	temp_dir="$(mktemp -d "/tmp/drt-pngref-XXXXXXXX}")"
 else
-	temp_dir="$(mktemp -d "${TMPDIR}/drt_pngref-XXXXXXXX")"
+	temp_dir="$(mktemp -d "${TMPDIR}/drt-pngref-XXXXXXXX")"
 fi
 
 cache_basepath="pngbrute";

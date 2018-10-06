@@ -17,15 +17,15 @@ file_name="${1}"
 
 if [ -z "${TMPDIR}" ]
 then
-	temp_dir="$(mktemp -d "/tmp/drt_flacbrute-XXXXXXXX}")"
+	temp_dir="$(mktemp -d "/tmp/drt-flacbrute-XXXXXXXX}")"
 else
-	temp_dir="$(mktemp -d "${TMPDIR}/drt_flacbrute-XXXXXXXX")"
+	temp_dir="$(mktemp -d "${TMPDIR}/drt-flacbrute-XXXXXXXX")"
 fi
 
 [ -z "${file_name}" ] && exit
 [ ! -f "${file_name}" ] && exit
 
-temp_file="$(mktemp "${temp_dir}/drt_flacbrute-XXXXXXXX")"
+temp_file="$(mktemp "${temp_dir}/drt-flacbrute-XXXXXXXX")"
 temp_flac="${temp_file}.flac"
 
 cp -a "${file_name}" "${temp_file}"

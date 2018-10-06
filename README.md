@@ -10,13 +10,13 @@ Usage
 You can populate your `$PATH` with this script collection this way:
 
 ```sh
-eval $(path/to/datarepotools/drt_setenv)
+eval $(path/to/datarepotools/drt-setenv)
 ```
 
 Then you can rewrite a whole tree git, including branches and keeping tags this way:
 
 ```
-drt_treebrute --all
+drt-treebrute --all
 ```
 
 Legal

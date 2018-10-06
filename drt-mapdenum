@@ -20,12 +20,12 @@ file_name="${1}"
 
 if [ -z "${TMPDIR}" ]
 then
-	temp_dir="$(mktemp -d "/tmp/drt_mapdenum-XXXXXXXX}")"
+	temp_dir="$(mktemp -d "/tmp/drt-mapdenum-XXXXXXXX}")"
 else
-	temp_dir="$(mktemp -d "${TMPDIR}/drt_mapdenum-XXXXXXXX")"
+	temp_dir="$(mktemp -d "${TMPDIR}/drt-mapdenum-XXXXXXXX")"
 fi
 
-temp_file="$(mktemp -u "${temp_dir}/drt_mapdenum-XXXXXXXX.map")"
+temp_file="$(mktemp -u "${temp_dir}/drt-mapdenum-XXXXXXXX.map")"
 esquirel map -im "${file_name}" -dn -om "${temp_file}"
 if [ -e "${temp_file}" ]
 then

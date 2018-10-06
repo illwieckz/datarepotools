@@ -9,9 +9,9 @@ fi
 
 if [ -z "${TMPDIR}" ]
 then
-	temp_dir="$(mktemp -d "/tmp/drt_gitbrute-XXXXXXXX}")"
+	temp_dir="$(mktemp -d "/tmp/drt-gitbrute-XXXXXXXX}")"
 else
-	temp_dir="$(mktemp -d "${TMPDIR}/drt_gitbrute-XXXXXXXX")"
+	temp_dir="$(mktemp -d "${TMPDIR}/drt-gitbrute-XXXXXXXX")"
 fi
 
 repo_dir="$(realpath "${repo}")"
@@ -20,7 +20,7 @@ repo_dir="$(realpath "${repo}")"
 
 cd "${repo_dir}"
 
-drt_gittest || exit "${?}"
+drt-gittest || exit "${?}"
 
 printf '=== regitting %s\n' "${repo_dir}"
 
