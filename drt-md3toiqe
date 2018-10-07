@@ -6,6 +6,10 @@
 # License: ISC
 # 
 
+# note: this tool is only useful to convert non-animated md3 (like static shapes)
+# since vertex animation can't be converted to bone-based animation
+# conversion usually require manual tweaking afterward
+
 if [ "${1}" = '-q' ]
 then
 	exec 1>/dev/null

@@ -6,6 +6,9 @@
 # License: ISC
 # 
 
+# note: sometime the conversion is not straightforward
+# and requires some manual tweaking
+
 [ -z "${1}" ] && exit
 
 dir="${1}"
