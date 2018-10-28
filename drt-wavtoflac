@@ -18,8 +18,29 @@ file_name="${1}"
 [ -z "${file_name}" ] && exit
 [ ! -f "${file_name}" ] && exit
 
-next="$(echo "${file_name}" | sed -e 's/\.wav$/.flac/')"
-flac -8 "${file_name}"
-[ -e "${next}" ] && rm -v "${file_name}"
+if [ -z "${TMPDIR}" ]
+then
+	temp_dir="$(mktemp -d "/tmp/drt-pngbrute-XXXXXXXX}")"
+else
+	temp_dir="$(mktemp -d "${TMPDIR}/drt-pngrute-XXXXXXXX")"
+fi
+
+temp_file="$(mktemp "${temp_dir}/flac-XXXXXXXX.wav")"
+
+flac_file="$(echo "${file_name}" | sed -e 's/\.wav$/.flac/')"
+
+ffmpeg -loglevel warning -y -i "${file_name}" "${temp_file}"
+touch -r "${file_name}" "${temp_file}"
+
+flac -s -8 "${temp_file}" -o "${flac_file}" >/dev/null
+
+if [ -f "${flac_file}" ]
+then
+	touch -r "${temp_file}" "${flac_file}"
+	rm -v "${file_name}"
+fi
+
+rm "${temp_file}"
+rmdir "${temp_dir}"
 
 #EOF

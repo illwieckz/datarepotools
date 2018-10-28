@@ -48,7 +48,7 @@ echo "= PNGBRUTE ========= ${file_name}"
 
 mkdir -p "${cache_dir}"
 
-cp "${file_name}" "${temp_file}"
+cp -a "${file_name}" "${temp_file}"
 optipng -o 0 -strip all "${temp_file}" "${temp_file}"
 convert "${temp_file}" "${rgba_file}"
 file_sum="${cache_dir}/$(getSum "${rgba_file}")"
@@ -69,7 +69,8 @@ else
 	pngwolf --out-deflate=zopfli,iter=30 --max-stagnate-time=20 --in="${temp_file}" --out="${temp_file}"
 	pngwolf --out-deflate=zopfli,iter=30 --max-stagnate-time=20 --in="${temp_file}" --out="${temp_file}"
 
-	isSmaller "${temp_file}" "${file_name}" && cp "${temp_file}" "${file_name}"
+	touch -r "${file_name}" "${temp_file}"
+	isSmaller "${temp_file}" "${file_name}" && cp -a "${temp_file}" "${file_name}"
 	cp "${file_name}" "${file_sum}"
 fi
 

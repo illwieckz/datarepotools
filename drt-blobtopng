@@ -50,6 +50,7 @@ _convert () {
 	else
 		printf 'failure'
 	fi
+	touch -r "${1}" "${2}"
 	rm "${temp_out}"
 }
 
@@ -77,7 +78,7 @@ _blob2png () {
 	if "${do_convert}"
 	then
 		do_convert='true'
-		cp -vn "${temp_file}" "${newname}"
+		cp -avn "${temp_file}" "${newname}"
 		if "${keep_original}"
 		then
 			echo "keep original: ${orig_file}"
@@ -104,6 +105,14 @@ then
 elif _testfmt "${file_name}" 'Targa image data'
 then
 	_blob2png "${file_name}"
+elif strings "${file_name}" | grep -q 'TRUEVISION-XFILE'
+then
+	echo "bizarre tga format: convert anyway"
+	_blob2png "${file_name}"
+# elif "${force_conversion}"
+# then
+#	echo "unknown: force conversion"
+#	_blob2png "${file_name}"
 fi
 
 rmdir "${temp_dir}"
