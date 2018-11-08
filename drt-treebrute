@@ -75,6 +75,11 @@ filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
 git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[pP][nN][gG]' | xargs -0 -P"$(nproc)" -n1 drt-pngbrute -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
+echo "rewriting tree gziping blend"
+filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][lL][eE][nN][dD]' | xargs -0 -P"$(nproc)" -n1 drt-blendbrute -q" --tag-name-filter cat -- "${git_ref}"
+[ -d "${filter_dir}" ] && rm -R "${filter_dir}"
+
 echo "rewriting tree bzip2ing xcf"
 filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
 git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[xX][cC][fF]' | xargs -0 -P"$(nproc)" -n1 drt-xcfbrute -q" --tag-name-filter cat -- "${git_ref}"
