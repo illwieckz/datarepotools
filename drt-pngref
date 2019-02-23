@@ -32,10 +32,10 @@ getSum () {
 
 if [ -z "${TMPDIR}" ]
 then
-	temp_dir="$(mktemp -d "/tmp/drt-pngref-XXXXXXXX}")"
-else
-	temp_dir="$(mktemp -d "${TMPDIR}/drt-pngref-XXXXXXXX")"
+	TMPDIR='/tmp'
 fi
+
+temp_dir="$(mktemp -d "${TMPDIR}/drt-pngref-XXXXXXXX")"
 
 cache_basepath="pngbrute";
 cache_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/${cache_basepath}";

@@ -47,10 +47,10 @@ fi
 
 if [ -z "${TMPDIR}" ]
 then
-	temp_dir="$(mktemp -d "/tmp/drt-treebrute-XXXXXXXX}")"
-else
-	temp_dir="$(mktemp -d "${TMPDIR}/drt-treebrute-XXXXXXXX")"
+	TMPDIR='/tmp'
 fi
+
+temp_dir="$(mktemp -d "${TMPDIR}/drt-treebrute-XXXXXXXX")"
 
 # nest sub tool
 TMPDIR="${temp_dir}"

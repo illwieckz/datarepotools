@@ -21,10 +21,10 @@ md3_file="${1}"
 
 if [ -z "${TMPDIR}" ]
 then
-	temp_dir="$(mktemp -d "/tmp/drt-md32iqe-XXXXXXXX}")"
-else
-	temp_dir="$(mktemp -d "${TMPDIR}/drt-md32iqe-XXXXXXXX")"
+	TMPDIR='/tmp'
 fi
+
+temp_dir="$(mktemp -d "${TMPDIR}/drt-md32iqe-XXXXXXXX")"
 
 [ -z "${md3_file}" ] && exit
 [ ! -f "${md3_file}" ] && exit

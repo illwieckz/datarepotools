@@ -9,10 +9,10 @@ fi
 
 if [ -z "${TMPDIR}" ]
 then
-	temp_dir="$(mktemp -d "/tmp/drt-gitbrute-XXXXXXXX}")"
-else
-	temp_dir="$(mktemp -d "${TMPDIR}/drt-gitbrute-XXXXXXXX")"
+	TMPDIR='/tmp'
 fi
+
+temp_dir="$(mktemp -d "${TMPDIR}/drt-gitbrute-XXXXXXXX")"
 
 repo_dir="$(realpath "${repo}")"
 

@@ -17,10 +17,10 @@ iqm_file="${1}"
 
 if [ -z "${TMPDIR}" ]
 then
-	temp_dir="$(mktemp -d "/tmp/drt-iqm2iqe-XXXXXXXX}")"
-else
-	temp_dir="$(mktemp -d "${TMPDIR}/drt-iqm2iqe-XXXXXXXX")"
+	TMPDIR='/tmp'
 fi
+
+temp_dir="$(mktemp -d "${TMPDIR}/drt-iqm2iqe-XXXXXXXX")"
 
 [ -z "${iqm_file}" ] && exit
 [ ! -f "${iqm_file}" ] && exit

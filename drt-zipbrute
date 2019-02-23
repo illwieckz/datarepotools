@@ -28,10 +28,10 @@ fi
 
 if [ -z "${TMPDIR}" ]
 then
-	temp_dir="$(mktemp -d "/tmp/drt-zipbrute-XXXXXXXX}")"
-else
-	temp_dir="$(mktemp -d "${TMPDIR}/drt-zipbrute-XXXXXXXX")"
+	TMPDIR='/tmp'
 fi
+
+temp_dir="$(mktemp -d "${TMPDIR}/drt-zipbrute-XXXXXXXX")"
 
 tmpzipdir="$(mktemp -d "${temp_dir}/drt-zipbrute-XXXXXXXX.zip.d")"
 tmpzipfile="$(mktemp -u "${temp_dir}/drt-zipbrute-XXXXXXXX.zip")"
