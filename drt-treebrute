@@ -65,7 +65,7 @@ git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[pP][n
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "bruteforcing exported png"
-# let some cores available for the detection part, but ensure there is always more than 1 parallel tasks to let the next file loading while another is taking a nap
+# let some cores available for the detection part, but ensure there is always more than 1 parallel task to let the next file loading while another is taking a nap
 find "${export_dir}/" -type f -a -iname '*.png' -print0 | drt-multitask -0 "-P$(($(nproc) / 4 + 1))" -n1 drt-pngbrute -q
 
 [ -d "${export_dir}" ] && rm -R "${export_dir}"
