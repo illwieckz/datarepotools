@@ -17,9 +17,9 @@ iqe_file="${1}"
 
 #if [ -z "${TMPDIR}" ]
 #then
-#	temp_dir="$(mktemp -d "/tmp/iqe2iqm-XXXXXXXX}")"
+#	temp_dir="$(mktemp -d "/tmp/drt-iqe2iqm-XXXXXXXX}")"
 #else
-#	temp_dir="$(mktemp -d "${TMPDIR}/iqe2iqm-XXXXXXXX")"
+#	temp_dir="$(mktemp -d "${TMPDIR}/drt-iqe2iqm-XXXXXXXX")"
 #fi
 
 [ -z "${iqe_file}" ] && exit

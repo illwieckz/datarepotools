@@ -24,9 +24,9 @@ _testfmt () {
 
 if [ -z "${TMPDIR}" ]
 then
-	temp_dir="$(mktemp -d "/tmp/gzblend-XXXXXXXX}")"
+	temp_dir="$(mktemp -d "/tmp/drt-gzblend-XXXXXXXX}")"
 else
-	temp_dir="$(mktemp -d "${TMPDIR}/gzblend-XXXXXXXX")"
+	temp_dir="$(mktemp -d "${TMPDIR}/drt-gzblend-XXXXXXXX")"
 fi
 
 _recompress () {

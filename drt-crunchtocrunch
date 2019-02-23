@@ -31,9 +31,9 @@ file_name="${1}"
 
 if [ -z "${TMPDIR}" ]
 then
-	temp_dir="$(mktemp -d "/tmp/crunch2crunch-XXXXXXXX}")"
+	temp_dir="$(mktemp -d "/tmp/drt-crunch2crunch-XXXXXXXX}")"
 else
-	temp_dir="$(mktemp -d "${TMPDIR}/crunch2crunch-XXXXXXXX")"
+	temp_dir="$(mktemp -d "${TMPDIR}/drt-crunch2crunch-XXXXXXXX")"
 fi
 
 [ -z "${file_name}" ] && exit

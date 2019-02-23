@@ -32,7 +32,7 @@ flac_file="$(echo "${file_name}" | sed -e 's/\.wav$/.flac/')"
 ffmpeg -loglevel warning -y -i "${file_name}" "${temp_file}"
 touch -r "${file_name}" "${temp_file}"
 
-flac -s -8 "${temp_file}" -o "${flac_file}" >/dev/null
+flac -f -s -8 "${temp_file}" -o "${flac_file}" >/dev/null
 
 if [ -f "${flac_file}" ]
 then
