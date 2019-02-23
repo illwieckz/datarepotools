@@ -54,50 +54,50 @@ fi
 
 echo "rewriting tree converting blob to png"
 filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][mM][pP]' '*.[tT][gG][aA]' '*.[wW][eE][bB][pP]' | xargs -0 -P"$(nproc)" -n1 drt-blobtopng -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][mM][pP]' '*.[tT][gG][aA]' '*.[wW][eE][bB][pP]' | drt-multitask -0 -P"$(nproc)" -n1 drt-blobtopng -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "exporting png from tree"
 export_dir="$(mktemp -d "${temp_dir}/export-XXXXXXXX")"
 filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
 # must be sequential to avoid collisions since multiples similar files are stored under the same name (deduplication)
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[pP][nN][gG]' | xargs -0 -P1 -n1 drt-pngexport '${export_dir}'" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[pP][nN][gG]' | drt-multitask -0 -P1 -n1 drt-pngexport '${export_dir}'" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "bruteforcing exported png"
 # let some cores available for the detection part, but ensure there is always more than 1 parallel tasks to let the next file loading while another is taking a nap
-find "${export_dir}/" -type f -a -iname '*.png' -print0 | xargs -0 "-P$(($(nproc) / 4 + 1))" -n1 drt-pngbrute -q
+find "${export_dir}/" -type f -a -iname '*.png' -print0 | drt-multitask -0 "-P$(($(nproc) / 4 + 1))" -n1 drt-pngbrute -q
 
 [ -d "${export_dir}" ] && rm -R "${export_dir}"
 
 echo "rewriting tree with bruteforced png"
 filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[pP][nN][gG]' | xargs -0 -P"$(nproc)" -n1 drt-pngbrute -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[pP][nN][gG]' | drt-multitask -0 -P"$(nproc)" -n1 drt-pngbrute -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "rewriting tree gziping blend"
 filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][lL][eE][nN][dD]' | xargs -0 -P"$(nproc)" -n1 drt-blendbrute -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][lL][eE][nN][dD]' | drt-multitask -0 -P"$(nproc)" -n1 drt-blendbrute -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "rewriting tree bzip2ing xcf"
 filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[xX][cC][fF]' | xargs -0 -P"$(nproc)" -n1 drt-xcfbrute -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[xX][cC][fF]' | drt-multitask -0 -P"$(nproc)" -n1 drt-xcfbrute -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "rewriting tree reflacing flac"
 filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[wW][aA][vV]' | xargs -0 -P"$(nproc)" -n1 drt-flacbrute -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[wW][aA][vV]' | drt-multitask -0 -P"$(nproc)" -n1 drt-flacbrute -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "rewriting tree flacing wav"
 filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[wW][aA][vV]' | xargs -0 -P"$(nproc)" -n1 drt-wavtoflac -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[wW][aA][vV]' | drt-multitask -0 -P"$(nproc)" -n1 drt-wavtoflac -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "rewriting tree denumberizing map"
 filter_dir="$(mktemp -d "${temp_dir}/filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[mM][aA][pP]'| xargs -0 -P"$(nproc)" -n1 drt-mapdenum -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[mM][aA][pP]'| drt-multitask -0 -P"$(nproc)" -n1 drt-mapdenum -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "garbage collecting, pruning"
