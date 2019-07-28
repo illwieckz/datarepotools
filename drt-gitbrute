@@ -1,25 +1,23 @@
 #! /bin/sh
 
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+#
+
 if [ -z "${1}" ]
 then
-	repo='.'
+	tree_dir='.'
 else
-	repo="${1}"
+	tree_dir="${1}"
+	shift
 fi
 
-repo_dir="$(realpath "${repo}")"
+cd "${tree_dir}"
 
-! [ -d "${repo_dir}" ] && exit 1
-
-cd "${repo_dir}"
-
-drt-gittest || exit "${?}"
-
-printf '=== compressing %s\n' "${repo_dir}"
-
+echo "make orphaned expired"
 git reflog expire --expire=now --all
+
+echo "garbage collect, prune"
 git gc --prune=now --aggressive
-
-printf '\n'
-
-#EOF

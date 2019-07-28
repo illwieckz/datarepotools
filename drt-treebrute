@@ -32,17 +32,33 @@ drt-gittest || exit "${?}"
 if [ -z "${1}" ]
 then
 	_help
-else
-	if [ "${1}" = '-h' -o "${1}]" = '--help' ]
-	then
-		_help
-	elif [ "${1}" = '--all' ]
-	then
-		git_ref="${1}"
-	else
-		git_ref="${1}..HEAD"
-	fi
+fi
+
+if [ "${1}" = '-h' -o "${1}" = '--help' ]
+then
+	_help
+fi
+
+tag_name='.'
+
+if [ "${1}" = '-t' ]
+then
 	shift
+	if ! [ -z "${1}" ]
+	then
+		tag_name="${1}"
+		shift
+	else
+		printf 'ERROR: -t needs tag name\n' >&2
+		exit 1
+	fi
+fi
+
+if [ "${1}" = '--all' ]
+then
+	git_ref="${1}"
+else
+	git_ref="${1}..HEAD"
 fi
 
 if [ -z "${TMPDIR}" ]
@@ -55,57 +71,74 @@ temp_dir="$(mktemp -d "${TMPDIR}/drt-treebrute-XXXXXXXX")"
 # nest sub tool
 TMPDIR="${temp_dir}"
 
+# for usual tasks
+cpu_count="$(nproc)"
+
+# for low-cpu tasks, when i/o are likely to slow down things
+cpu_twice="$(($(nproc) * 2))"
+
+# for tasks that are heavily threaded and best result depend on their execution time
+# so it's better to let them using many threads, but if there is at least 4 cores,
+# spawn some processes in parallel to not lose time between the loading of two files
+if command -v bc >/dev/null
+then
+	cpu_lazy="$(echo "sqrt(${cpu_count})" | bc)"
+else
+	if [ "${cpu_count}" -lt '4' ]
+	then
+		cpu_lazy='1'
+	else
+		cpu_lazy='2'
+	fi
+fi
+
 echo "rewriting tree converting blob to png"
 filter_dir="$(mktemp -d "${temp_dir}/drt-filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][mM][pP]' '*.[tT][gG][aA]' '*.[wW][eE][bB][pP]' | drt-multitask -0 -P"$(nproc)" -n1 drt-blobtopng -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][mM][pP]' '*.[tT][gG][aA]' '*.[wW][eE][bB][pP]' | drt-multitask -0 -P'${cpu_count}' -n1 drt-blobtopng -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "exporting png from tree"
 export_dir="$(mktemp -d "${temp_dir}/export-XXXXXXXX")"
 filter_dir="$(mktemp -d "${temp_dir}/drt-filter-XXXXXXXX")"
-# must be sequential to avoid collisions since multiples similar files are stored under the same name (deduplication)
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[pP][nN][gG]' | drt-multitask -0 -P1 -n1 drt-pngexport '${export_dir}'" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[pP][nN][gG]' | drt-multitask -0 -P'${cpu_twice}' -n1 drt-pngexport '${export_dir}'" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "bruteforcing exported png"
-# let some cores available for the detection part, but ensure there is always more than 1 parallel task to let the next file loading while another is taking a nap
-find "${export_dir}/" -type f -a -iname '*.png' -print0 | drt-multitask -0 "-P$(($(nproc) / 4 + 1))" -n1 drt-pngbrute -q
+find "${export_dir}/" -type f -a -iname '*.png' -print0 | drt-multitask -0 "-P${cpu_lazy}" -n1 drt-pngbrute -q -t "${tag_name}"
 
 [ -d "${export_dir}" ] && rm -R "${export_dir}"
 
 echo "rewriting tree with bruteforced png"
 filter_dir="$(mktemp -d "${temp_dir}/drt-filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[pP][nN][gG]' | drt-multitask -0 -P"$(nproc)" -n1 drt-pngbrute -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[pP][nN][gG]' | drt-multitask -0 -P'${cpu_twice}' -n1 drt-pngbrute -q -t '${tag_name}'" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "rewriting tree gziping blend"
 filter_dir="$(mktemp -d "${temp_dir}/drt-filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][lL][eE][nN][dD]' | drt-multitask -0 -P"$(nproc)" -n1 drt-blendbrute -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][lL][eE][nN][dD]' | drt-multitask -0 -P'${cpu_count}' -n1 drt-blendbrute -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "rewriting tree bzip2ing xcf"
 filter_dir="$(mktemp -d "${temp_dir}/drt-filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[xX][cC][fF]' | drt-multitask -0 -P"$(nproc)" -n1 drt-xcfbrute -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[xX][cC][fF]' | drt-multitask -0 -P'${cpu_count}' -n1 drt-xcfbrute -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "rewriting tree reflacing flac"
 filter_dir="$(mktemp -d "${temp_dir}/drt-filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[wW][aA][vV]' | drt-multitask -0 -P"$(nproc)" -n1 drt-flacbrute -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[wW][aA][vV]' | drt-multitask -0 -P'${cpu_count}' -n1 drt-flacbrute -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "rewriting tree flacing wav"
 filter_dir="$(mktemp -d "${temp_dir}/drt-filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[wW][aA][vV]' | drt-multitask -0 -P"$(nproc)" -n1 drt-wavtoflac -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[wW][aA][vV]' | drt-multitask -0 -P'${cpu_count}' -n1 drt-wavtoflac -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "rewriting tree denumberizing map"
 filter_dir="$(mktemp -d "${temp_dir}/drt-filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[mM][aA][pP]'| drt-multitask -0 -P"$(nproc)" -n1 drt-mapdenum -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[mM][aA][pP]'| drt-multitask -0 -P'${cpu_count}' -n1 drt-mapdenum -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
-echo "garbage collecting, pruning"
-git reflog expire --expire=now --all
-git gc --prune=now --aggressive
+drt-gitbrute
 
 rmdir "${temp_dir}"
 

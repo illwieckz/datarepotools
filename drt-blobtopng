@@ -56,7 +56,7 @@ _convert () {
 
 _blob2png () {
 	orig_file="${1}"
-	newname="$(echo "${orig_file}" | sed -e 's/\.webp$/.png/;s/\.tga/.png/;s/\.bmp$/.png/')"
+	newname="$(echo "${orig_file}" | sed -e 's/\.webp$/.png/I;s/\.tga/.png/I;s/\.bmp$/.png/I')"
 	temp_file="$(mktemp "${temp_dir}/blob-XXXXXXXX.png")"
 	
 	do_convert='false'
