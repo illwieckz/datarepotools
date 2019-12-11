@@ -1,0 +1,42 @@
+#! /usr/bin/env bash
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+#
+
+set -e
+
+if [ "${1}" = '-q' ]
+then
+	exec 1>/dev/null
+	exec 2>/dev/null
+	shift
+fi
+
+file_name="${1}"
+
+[ -z "${file_name}" ] && exit
+[ ! -f "${file_name}" ] && exit
+
+TMPDIR="${TMPDIR-/tmp}"
+
+temp_dir="$(mktemp -d "${TMPDIR}/drt-renormalize.XXXXXXXX")"
+
+temp_png_file="$(mktemp "${temp_dir}/png-XXXXXXXX.png")"
+temp_tga_file="$(mktemp "${temp_dir}/png-XXXXXXXX.tga")"
+temp_file="$(mktemp "${temp_dir}/png-XXXXXXXX.png")"
+
+convert -verbose -strip "${file_name}" "${temp_png_file}"
+convert -verbose -strip "${temp_png_file}" "${temp_tga_file}"
+
+crunch -file "${temp_tga_file}" -renormalize -rtopmip -out "${temp_file}"
+
+touch -r "${file_name}" "${temp_file}"
+rm "${file_name}"
+mv "${temp_file}" "${file_name}"
+
+rm "${temp_png_file}"
+rm "${temp_tga_file}"
+rmdir "${temp_dir}"
