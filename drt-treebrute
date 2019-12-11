@@ -92,6 +92,9 @@ else
 	fi
 fi
 
+# some git action may recreate the repository, cd first to not live in dead one
+cd .
+
 echo "rewriting tree converting blob to png"
 filter_dir="$(mktemp -d "${temp_dir}/drt-filter-XXXXXXXX")"
 git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][mM][pP]' '*.[tT][gG][aA]' '*.[wW][eE][bB][pP]' | drt-multitask -0 -P'${cpu_count}' -n1 drt-blobtopng -q" --tag-name-filter cat -- "${git_ref}"

@@ -29,12 +29,9 @@ fi
 
 file_name="${1}"
 
-if [ -z "${TMPDIR}" ]
-then
-	TMPDIR='/tmp'
-fi
+TMPDIR="${TMPDIR-/tmp}"
 
-temp_dir="$(mktemp -d "${TMPDIR}/drt-crunch2crunch-XXXXXXXX")"
+temp_dir="$(mktemp -d "${TMPDIR}/drt-crunch2crunch.XXXXXXXX")"
 
 [ -z "${file_name}" ] && exit
 [ ! -f "${file_name}" ] && exit
@@ -51,9 +48,9 @@ _crunch2crunch () {
 		fi
 	done
 
-	temp_file="$(mktemp "${temp_dir}/blob-XXXXXXXX.tga")"
+	temp_file="$(mktemp "${temp_dir}/blob.XXXXXXXX.tga")"
 
-	crunch-binomial -file ${orig_file} -out ${temp_file} >/dev/null 2>&1
+	crunch.binomial -file "${orig_file}" -out "${temp_file}" >/dev/null 2>&1
 	touch -r "${orig_file}" "${temp_file}"
 
 	if ${normal}
@@ -63,7 +60,7 @@ _crunch2crunch () {
 		crunch -file ${temp_file} -dxn -renormalize -rtopmip -quality 255 -out ${orig_file} >/dev/null 2>&1
 	else
 		echo "standard: ${file_name}"
-		crunch -file ${temp_file} -quality 255 -out ${orig_file} >/dev/null 2>&1
+		crunch -file "${temp_file}" -quality 255 -out "${orig_file}" >/dev/null 2>&1
 	fi
 
 	touch -r "${temp_file}" "${orig_file}"
