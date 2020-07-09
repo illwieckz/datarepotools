@@ -64,7 +64,7 @@ echo "= PNGBRUTE ========= ${file_name}"
 mkdir -p "${cache_dir}"
 
 cp -a --reflink=auto "${file_name}" "${temp_file}"
-oxipng --opt 0 --strip all "${temp_file}" "${temp_file}"
+oxipng --opt 0 --interlace 0 --strip all "${temp_file}"
 convert "${temp_file}" "${rgba_file}"
 file_sum=$(getSum "${rgba_file}")
 cache_file="$(find "${cache_basedir}" -type f -name "${file_sum}" | tail -n1)"
@@ -79,15 +79,18 @@ then
 	cp -a --reflink=auto "${cache_file}" "${file_name}"
 else
 	convert "${temp_file}" +set comment -define png:exclude-chunks=date "${temp_file}"
-	oxipng --opt 6 --alpha --strip all "${temp_file}"
+
+	# do not use oxipng --alpha
+	# alpha channel may still be used as a standalone component
+	oxipng --opt 6 --strip all "${temp_file}"
 
 	crush_file="$(mktemp "${temp_dir}/crushed-XXXXXXXX")"
 	pngcrush "${temp_file}" "${crush_file}"
 	isSmaller "${crush_file}" "${temp_file}" && cp "${crush_file}" "${temp_file}"
 	rm "${crush_file}"
 
-#	pngwolf --out-deflate=zopfli,iter=30 --max-stagnate-time=20 --in="${temp_file}" --out="${temp_file}"
-	pngwolf --out-deflate=zopfli,iter=20 --max-stagnate-time=10 --in="${temp_file}" --out="${temp_file}"
+	pngwolf --out-deflate=zopfli,iter=30 --max-stagnate-time=20 --in="${temp_file}" --out="${temp_file}"
+#	pngwolf --out-deflate=zopfli,iter=20 --max-stagnate-time=10 --in="${temp_file}" --out="${temp_file}"
 
 	touch -r "${file_name}" "${temp_file}"
 	isSmaller "${temp_file}" "${file_name}" && cp -a "${temp_file}" "${file_name}"
