@@ -34,16 +34,20 @@ echo "${file_name}"
 if _testfmt "${file_name}" 'GIMP XCF image data'
 then
 	temp_file="$(mktemp "${temp_dir}/xcfz-XXXXXXXX.bzip2")"
-	cat "${file_name}" | bzip2 -9 > "${temp_file}"
+	cat "${file_name}" | xz -9 > "${temp_file}"
 	touch -r "${file_name}" "${temp_file}"
 	mv "${temp_file}" "${file_name}"
 elif _testfmt "${file_name}" 'gzip compressed data'
 then
 	temp_file="$(mktemp "${temp_dir}/xcfz-XXXXXXXX.bzip2")"
-	cat "${file_name}" | gzip -d | bzip2 -9 > "${temp_file}"
+	cat "${file_name}" | gzip -d | xz -9 > "${temp_file}"
 	touch -r "${file_name}" "${temp_file}"
 	mv "${temp_file}" "${file_name}"
 elif _testfmt "${file_name}" 'bzip2 compressed data'
+then
+	# do nothing
+	printf ''
+elif _testfmt "${file_name}" 'XZ compressed data'
 then
 	# do nothing
 	printf ''
