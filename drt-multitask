@@ -2,10 +2,10 @@
 
 if command -v parallel >/dev/null
 then
-	parallel --will-cite --bar ${@}
+	parallel --will-cite --bar "${@}"
 elif command -v xargs >/dev/null
 then
-	xargs ${@}
+	xargs "${@}"
 else
 	printf 'ERROR: your system must provide parallel or xargs\n' >&2
 	exit 1
