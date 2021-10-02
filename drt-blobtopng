@@ -41,14 +41,22 @@ temp_dir="$(mktemp -d "${TMPDIR}/drt-blob2png-XXXXXXXX")"
 
 _convert () {
 	temp_out="$(mktemp "${temp_dir}/out-XXXXXXXX.txt")"
-	if convert "${1}" "${2}" >"${temp_out}" 2>&1
+	if echo "${1}" | grep -q -i -e '\.tga$'
 	then
-		if grep -q 'lossy' "${temp_out}"
+		if ! drt-imageconvert "${1}" "${2}"
 		then
-			printf 'lossy'
+			printf 'failure'
 		fi
 	else
-		printf 'failure'
+		if convert "${1}" "${2}" >"${temp_out}" 2>&1
+		then
+			if grep -q 'lossy' "${temp_out}"
+			then
+				printf 'lossy'
+			fi
+		else
+			printf 'failure'
+		fi
 	fi
 	touch -r "${1}" "${2}"
 	rm "${temp_out}"

@@ -1,0 +1,11 @@
+#! /usr/bin/env python3
+#-*- coding: UTF-8 -*-
+
+import sys
+from PIL import Image
+
+input_file_name = sys.argv[1]
+output_file_name = sys.argv[2]
+
+image = Image.open(input_file_name)
+image.save(output_file_name)
