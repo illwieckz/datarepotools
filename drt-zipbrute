@@ -40,7 +40,7 @@ echo "tmpzipdir: ${tmpzipdir}"
 echo "tmpzipfile: ${tmpzipfile}"
 
 (cd "${tmpzipdir}"; 7za x "${file}")
-(cd "${tmpzipdir}"; 7za a ${opt} "${tmpzipfile}" '.')
+(cd "${tmpzipdir}"; chmod u+rw,go+r,go-w -R .; 7za a ${opt} "${tmpzipfile}" .)
 touch --reference="${file}" "${tmpzipfile}"
 mv "${tmpzipfile}" "${file}"
 rm -R "${tmpzipdir}"
