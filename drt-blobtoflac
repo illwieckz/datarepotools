@@ -25,16 +25,16 @@ fi
 
 temp_dir="$(mktemp -d "${TMPDIR}/drt-pngrute-XXXXXXXX")"
 
-temp_file="$(mktemp "${temp_dir}/flac-XXXXXXXX.wav")"
+temp_file="$(mktemp "${temp_dir}/flac-XXXXXXXX.flac")"
 
-flac_file="$(echo "${file_name}" | sed -e 's/\.wav$/.flac/')"
+flac_file="$(echo "${file_name}" | sed -e 's/\.[^.]*$/.flac/')"
 
 ffmpeg -loglevel warning -y -i "${file_name}" "${temp_file}"
 touch -r "${file_name}" "${temp_file}"
 
-flac -f -s -8 "${temp_file}" -o "${flac_file}" >/dev/null
+drt-flacbrute "${temp_file}"
 
-if [ -f "${flac_file}" ]
+if [ -f "${temp_file}" ]
 then
 	touch -r "${temp_file}" "${flac_file}"
 	rm -v "${file_name}"

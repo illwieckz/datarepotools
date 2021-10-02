@@ -121,7 +121,7 @@ filter_dir="$(mktemp -d "${temp_dir}/drt-filter-XXXXXXXX")"
 git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][lL][eE][nN][dD]' | drt-multitask -0 -P'${cpu_count}' -n1 drt-blendbrute -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
-echo "rewriting tree bzip2ing xcf"
+echo "rewriting tree xzing xcf"
 filter_dir="$(mktemp -d "${temp_dir}/drt-filter-XXXXXXXX")"
 git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[xX][cC][fF]' | drt-multitask -0 -P'${cpu_count}' -n1 drt-xcfbrute -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
@@ -133,7 +133,7 @@ git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[wW][a
 
 echo "rewriting tree flacing wav"
 filter_dir="$(mktemp -d "${temp_dir}/drt-filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[wW][aA][vV]' | drt-multitask -0 -P'${cpu_count}' -n1 drt-wavtoflac -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[wW][aA][vV]' | drt-multitask -0 -P'${cpu_count}' -n1 drt-blobtoflac -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "rewriting tree denumberizing map"
