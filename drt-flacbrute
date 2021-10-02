@@ -25,12 +25,24 @@ temp_dir="$(mktemp -d "${TMPDIR}/drt-flacbrute-XXXXXXXX")"
 [ -z "${file_name}" ] && exit
 [ ! -f "${file_name}" ] && exit
 
-temp_file="$(mktemp "${temp_dir}/drt-flacbrute-XXXXXXXX")"
-temp_flac="${temp_file}.flac"
+temp_file="$(mktemp "${temp_dir}/drt-flacbrute-XXXXXXXX.wav")"
+temp_flac="$(mktemp "${temp_dir}/drt-flacbrute-XXXXXXXX.flac")"
 
-cp -a "${file_name}" "${temp_file}"
+flac --force --decode "${file_name}" --output-name="${temp_file}"
 
-flac -8 "${temp_file}"
+# From FLAC documentation, see https://www.xiph.org/flac/documentation_format_overview.html
+# > FLAC does not require seek points for seeking but they can speed up seeks,
+# > or be used for cueing in editing applications
+
+# From FLAC documentation, see https://www.xiph.org/flac/documentation_format_overview.html
+# > Then you can reserve a PADDING block of the correct size when encoding,
+# > and overwrite the padding block with your APPLICATION block after encoding.
+
+# From FLAC man page,
+# > This is useful if you plan to tag the file later with an APPLICATION block;
+# > instead of having to rewrite the entire file later just to insert your block,
+# > you can write directly over the PADDING block.
+flac --force --exhaustive-model-search --best --no-padding --no-seektable "${temp_file}" --output-name="${temp_flac}"
 
 if [ -e "${temp_flac}" ]
 then
