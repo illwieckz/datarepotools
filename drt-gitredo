@@ -34,7 +34,7 @@ git gc --prune=now --aggressive
 rm -Rf "${repo_dir}/.git"
 rm -R "${repo_dir}"
 
-mv -v "${temp_dir}" "${repo_dir}"
+mv "${temp_dir}" "${repo_dir}"
 printf '\n'
 
 #EOF
