@@ -34,6 +34,8 @@ touch -r "${file_name}" "${temp_file}"
 
 drt-flacbrute "${temp_file}"
 
+cp "${temp_file}" "${flac_file}"
+
 if [ -f "${temp_file}" ]
 then
 	touch -r "${temp_file}" "${flac_file}"
