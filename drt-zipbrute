@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /usr/bin/env bash
 
 ### Legal
 #
@@ -6,45 +6,67 @@
 # License: ISC
 # 
 
-if [ "${1}" = '-7' ]
-then
-#	opt='-t7z -m0=lzma -mx=9 -mfb=64 -md=32m -ms=on'
-	opt='-t7z -mx=9 -ms=on'
-	shift
-else
-	opt='-tzip -mx=9'
-fi
+set -u
+set -e
+set -o pipefail
 
-if [ "x${1}" = 'x' ]
-then
-	echo "missing file"
-	exit
-elif [ "$(echo "${1}" | cut -c1)" = '/' ]
-then
-	file="${1}"
-else
-	file="$(pwd)/${1}"
-fi
+drt_program_dir="$(dirname "$(realpath "${0}")")"
 
-if [ -z "${TMPDIR}" ]
-then
-	TMPDIR='/tmp'
-fi
+. "${drt_program_dir}/drt-common"
+
+drt_program_zip="${drt_program_dir}/drt-zip"
+. "${drt_program_zip}" "${@}" 'dummy'
 
 temp_dir="$(mktemp -d "${TMPDIR}/drt-zipbrute-XXXXXXXX")"
 
-tmpzipdir="$(mktemp -d "${temp_dir}/drt-zipbrute-XXXXXXXX.zip.d")"
-tmpzipfile="$(mktemp -u "${temp_dir}/drt-zipbrute-XXXXXXXX.zip")"
+temp_zip_dir="$(mktemp -d "${temp_dir}/drt-zipbrute-XXXXXXXX.zip.d")"
+temp_zip_file="$(mktemp -u "${temp_dir}/drt-zipbrute-XXXXXXXX.zip")"
 
-echo "tmpzipdir: ${tmpzipdir}"
-echo "tmpzipfile: ${tmpzipfile}"
+echo "temp_zip_dir: ${temp_zip_dir}"
+echo "temp_zip_file: ${temp_zip_file}"
 
-(cd "${tmpzipdir}"; 7za x "${file}")
-(cd "${tmpzipdir}"; chmod u+rw,go+r,go-w -R .; 7za a ${opt} "${tmpzipfile}" .)
-touch --reference="${file}" "${tmpzipfile}"
-mv "${tmpzipfile}" "${file}"
-rm -R "${tmpzipdir}"
+(
+	touch_option='--no-touch'
+	if "${touch_enable}"
+	then
+		touch_option='--touch'
+		if "${epoch_enable}"
+		then
+			touch_option='--touch-epoch'
+		fi
+	fi
+
+	chmod_option='--no-chmod'
+	if "${chmod_enable}"
+	then
+		chmod_option='--chmod'
+	fi
+
+	directory_option='--directories'
+	if ! "${directories_enable}"
+	then
+		directory_option='--no-directories'
+	fi
+
+	cd "${temp_zip_dir}"
+
+	7za x "${zip_file}"
+
+	if "${touch_enable}"
+	then
+		if [ "${epoch_enable}" ]
+		then
+			touch --date='@0' '.'
+		fi
+
+		touch --reference "${zip_file}" .
+	fi
+
+	"${drt_program_zip}" "${touch_option}" "${chmod_option}" "${directory_option}" "-${compression_level}" "${temp_zip_file}" '.'
+)
+
+touch --reference="${zip_file}" "${temp_zip_file}"
+mv "${temp_zip_file}" "${zip_file}"
+rm -R "${temp_zip_dir}"
 
 rmdir "${temp_dir}"
-
-#EOF

@@ -1,0 +1,483 @@
+#! /usr/bin/env bash
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+set -u
+set -e
+set -o pipefail
+
+drt_program_dir="$(dirname "$(realpath "${0}")")"
+
+. "${drt_program_dir}/drt-common"
+
+compression_level='4'
+directories_enable='true'
+touch_enable='false'
+epoch_enable='false'
+chmod_enable='false'
+subzip_enable='false'
+writesubzip_enable='false'
+while true
+do
+	case "${1:-}" in
+		'-'[0-4])
+			compression_level="${1:1}"
+			;;
+		'-d'|'--directories')
+			directories_enable='true'
+			;;
+		'-nd'|'--no-directories')
+			directories_enable='false'
+			;;
+		'-t'|'--touch')
+			touch_enable='true'
+			;;
+		'-te'|'--touch-epoch')
+			touch_enable='true'
+			epoch_enable='true'
+			;;
+		'-nt'|'--no-touch')
+			touch_enable='false'
+			;;
+		'-m'|'--chmod')
+			chmod_enable='true'
+			;;
+		'-nm'|'--no-chmod')
+			chmod_enable='false'
+			;;
+		'--subzip')
+			subzip_enable='true'
+			;;
+		'--writesubzip')
+			writesubzip_enable='true'
+			;;
+		'-'*|'--'*)
+			_error 'unknown option'
+			;;
+		*)
+			break;
+			;;
+	esac
+	shift
+done
+
+if [ -z "${1:-}" ]
+then
+	_error 'missing zip file path'
+else
+	zip_file="$(realpath "${1}")"
+fi
+shift
+
+if [ -z "${1:-}" ]
+then
+	_error 'missing source_path file or folder path'
+else
+	source_path="${1}"
+fi
+shift
+
+doEncode () {
+	base64 -w0 \
+		| sed -e 's|/|-|g;s|=|_|g'
+}
+
+doSubZip () {
+	exec 2>/dev/null
+	exec >/dev/null
+
+	local temp_dir="${1}"; shift
+	local temp_zip_file="${temp_dir}/output.zip"
+	local temp_zip_dir="${temp_dir}/merge"
+
+	local file_path="${1}"; shift
+	file_path="$(echo "${file_path}" | sed -e 's|^\./||;s|^\.$||')"
+	local zip_prefix="${temp_zip_dir}/$(printf "${file_path}" | doEncode)"
+
+	if [ -z "${file_path}" ]
+	then
+		return
+	fi
+
+	local is_empty='false'
+	if ! [ -s "${file_path}" ]
+	then
+		is_empty='true'
+	fi
+
+	local is_symlink='false'
+	local is_directory='false'
+	# A symbolink link to a directory is both
+	# a symbolink link and a directory.
+	if [ -h "${file_path}" ]
+	then
+		is_symlink='true'
+	fi
+
+	if [ -d "${file_path}" ]
+	then
+		is_directory='true'
+	fi
+
+	if ! "${directories_enable}"
+	then
+		if "${is_symlink}"
+		then
+			# Keep symbolic links to directories.
+			true
+		elif "${is_directory}"
+		then
+			return
+		fi
+	fi
+
+	<<-EOF
+	0: store
+	1: zlib
+	2: deflate
+	3: 7z
+	4: zopfli
+	EOF
+
+	local zip_args=''
+	local z7ip_args=''
+	local advzip_shrink=''
+	local advzip_iter='10'
+	case "${compression_level}" in
+		0)
+			zip_args='--compression-method store'
+			advzip_shrink='store'
+			;;
+		1)
+			zip_args='--compression-method store'
+			advzip_shrink='fast'
+			;;
+		2)
+			# default zip: --compression-method deflate
+			zip_args='-9'
+			advzip_shrink='normal'
+			;;
+		3)
+			# default zip: --compression-method deflate
+			zip_args='-9'
+			advzip_shrink='normal'
+			;;
+		4)
+			# default zip: --compression-method deflate
+			zip_args='-9'
+			advzip_shrink='insane'
+
+			# Note: in fact this is never used if empty,
+			# symlink and directory.
+			if "${is_empty}"
+			then
+				# default
+				true
+			elif "${is_symlink}"
+			then
+				# default.
+				true
+			elif "${is_directory}"
+			then
+				# default.
+				true
+			else
+				file_size="$(stat -c '%s' "${file_path}")"
+				# ≤ 50M
+				if [ "${file_size}" -le 50000 ]
+				then
+					advzip_iter='100'
+				# ≤ 5M
+				elif [ "${file_size}" -le 5000 ]
+				then
+					advzip_iter='1000'
+				fi
+			fi
+			;;
+	esac
+
+	local zip_path="${zip_prefix}.zip"
+
+	local zip_7z_default_path="${zip_prefix}_7z-default.zip"
+	local zip_7z_more_path="${zip_prefix}_7z-more.zip"
+	local zip_7z_extra_path="${zip_prefix}_7z-extra.zip"
+	local zip_advzip_default_path="${zip_prefix}_advzip-default.zip"
+	local zip_advzip_more_path="${zip_prefix}_advzip-more.zip"
+	local zip_advzip_extra_path="${zip_prefix}_advzip-extra.zip"
+
+	# It is needed by advzip so we cannot do it
+	# in parallel.
+	zip --symlinks \
+		${zip_args} \
+		"${zip_path}" "${file_path}"
+
+	if "${is_empty}"
+	then
+		# Skip empty file because advzip crashes with empty file.
+		true
+	elif "${is_symlink}"
+	then
+		# Skip symbolic link because old 7za stores symbolic link
+		# as regular file when it's passed on command line.
+		true
+	elif "${is_directory}"
+	then
+		# Skip directory because advzip crashes with empty directory.
+		# Skip directory because 7za stores directories recursively
+		# in all cases.
+		true
+	else
+		case "${compression_level}" in
+			[3-4])
+				7za a -tzip -snl \
+					"${zip_7z_default_path}" "${file_path}" &
+
+				7za a -tzip -snl \
+					-mx=9 \
+					"${zip_7z_more_path}" "${file_path}" &
+
+				7za a -tzip -snl \
+					-mx=9 -mfb=258 -mpass=15 \
+					"${zip_7z_extra_path}" "${file_path}" &
+				;;
+		esac
+
+		case "${compression_level}" in
+			[1-4])
+				cp "${zip_path}" "${zip_advzip_default_path}"
+				advzip -z -k "--shrink-${advzip_shrink}" \
+					"${zip_advzip_default_path}" &
+				;;
+		esac
+
+		case "${compression_level}" in
+			4)
+				cp "${zip_path}" "${zip_advzip_more_path}"
+				advzip -z -k "--shrink-${advzip_shrink}" -i 10 \
+					"${zip_advzip_more_path}" &
+
+				if [ "${advzip_iter}" -gt '10' ]
+				then
+					cp "${zip_path}" "${zip_advzip_extra_path}"
+					advzip -z -k "--shrink-${advzip_shrink}" -i "${advzip_iter}" \
+						"${zip_advzip_extra_path}" &
+				fi
+				;;
+		esac
+	fi
+
+	wait
+
+	local preferred_compressor='zip'
+	local zip_file_size="$(stat -c '%s' "${zip_path}")"
+	local zip_other_size
+	if [ -f "${zip_7z_default_path}" ]
+	then
+		zip_other_size="$(stat -c '%s' "${zip_7z_default_path}")"
+		if [ "${zip_other_size}" -lt "${zip_file_size}" ]
+		then
+			preferred_compressor='7za-default'
+			zip_file_size="${zip_other_size}"
+			mv "${zip_7z_default_path}" "${zip_path}"
+		else
+			rm "${zip_7z_default_path}"
+		fi
+	fi
+
+	if [ -f "${zip_7z_more_path}" ]
+	then
+		zip_other_size="$(stat -c '%s' "${zip_7z_more_path}")"
+		if [ "${zip_other_size}" -lt "${zip_file_size}" ]
+		then
+			preferred_compressor='7za-more'
+			zip_file_size="${zip_other_size}"
+			mv "${zip_7z_more_path}" "${zip_path}"
+		else
+			rm "${zip_7z_more_path}"
+		fi
+	fi
+
+	if [ -f "${zip_7z_extra_path}" ]
+	then
+		zip_other_size="$(stat -c '%s' "${zip_7z_extra_path}")"
+		if [ "${zip_other_size}" -lt "${zip_file_size}" ]
+		then
+			preferred_compressor='7za-extra'
+			zip_file_size="${zip_other_size}"
+			mv "${zip_7z_extra_path}" "${zip_path}"
+		else
+			rm "${zip_7z_extra_path}"
+		fi
+	fi
+
+	if [ -f "${zip_advzip_default_path}" ]
+	then
+		zip_other_size="$(stat -c '%s' "${zip_advzip_default_path}")"
+		if [ "${zip_other_size}" -lt "${zip_file_size}" ]
+		then
+			preferred_compressor='advzip-default'
+			zip_file_size="${zip_other_size}"
+			mv "${zip_advzip_default_path}" "${zip_path}"
+		else
+			rm "${zip_advzip_default_path}"
+		fi
+	fi
+
+	if [ -f "${zip_advzip_more_path}" ]
+	then
+		zip_other_size="$(stat -c '%s' "${zip_advzip_more_path}")"
+		if [ "${zip_other_size}" -lt "${zip_file_size}" ]
+		then
+			preferred_compressor='advzip-more'
+			zip_file_size="${zip_other_size}"
+			mv "${zip_advzip_more_path}" "${zip_path}"
+		else
+			rm "${zip_advzip_more_path}"
+		fi
+	fi
+
+	if [ -f "${zip_advzip_extra_path}" ]
+	then
+		zip_other_size="$(stat -c '%s' "${zip_advzip_extra_path}")"
+		if [ "${zip_other_size}" -lt "${zip_file_size}" ]
+		then
+			preferred_compressor='advzip-extra'
+			zip_file_size="${zip_other_size}"
+			mv "${zip_advzip_extra_path}" "${zip_path}"
+		else
+			rm "${zip_advzip_extra_path}"
+		fi
+	fi
+
+	local temp_zip_list="${temp_zip_dir}.list"
+	touch "${temp_zip_list}"
+	printf '%s\0' "${file_path}" >> "${temp_zip_list}"
+
+	local temp_compressor_list="${temp_zip_dir}-compressors.list"
+	touch "${temp_compressor_list}"
+	printf '%s\t%s\n' "${file_path}" "${preferred_compressor}" >> "${temp_compressor_list}"
+}
+
+doWriteSubZip () {
+	local temp_dir="${1}"; shift
+	temp_zip_file="${temp_dir}/output.zip"
+	temp_zip_dir="${temp_dir}/merge"
+
+	local file_path="${1}"; shift
+	file_path="$(echo "${file_path}" | sed -e 's|^\./||;s|^\.$||')"
+	local zip_path="${temp_zip_dir}/$(printf "${file_path}" | doEncode).zip"
+
+	if [ -z "${file_path}" ]
+	then
+		return
+	fi
+
+	if ! "${directories_enable}"
+	then
+		# Keep symbolic links to directories.
+		if [ -h "${file_path}" ]
+		then
+			true
+		elif [ -d "${file_path}" ]
+		then
+			return
+		fi
+	fi
+
+	local temp_subzip_list="${temp_zip_dir}-subzip.list"
+	touch "${temp_subzip_list}"
+	echo "${zip_path}" >> "${temp_subzip_list}"
+}
+
+if [ "${drt_program_name}" = 'drt-zip' ]
+then
+	if "${subzip_enable}"
+	then
+		doSubZip "${zip_file}" "${source_path}"
+	elif "${writesubzip_enable}"
+	then
+		doWriteSubZip "${zip_file}" "${source_path}"
+	else
+		cat <<-EOF
+		folder: $(pwd)
+		directories: ${directories_enable}
+		touch: ${touch_enable}
+		epoch: ${epoch_enable}
+		chmod: ${chmod_enable}
+		compression level: ${compression_level}
+		EOF
+
+		temp_dir="$(mktemp -d "${TMPDIR}/drt-zip-XXXXXXXX")"
+
+		temp_zip_file="${temp_dir}/output.zip"
+		temp_zip_dir="${temp_dir}/merge"
+
+		mkdir -p "${temp_zip_dir}"
+
+		echo "temp_zip_file: ${temp_zip_file}"
+		echo "temp_zip_dir: ${temp_zip_dir}"
+
+		if "${touch_enable}"
+		then
+			if "${epoch_enable}"
+			then
+				touch --date='@0' "${source_path}"
+			fi
+
+			find "${source_path}" -print0 \
+				| drt-multitask -0 -I{} -P"$(nproc)" \
+					touch --reference "${source_path}" {}
+		fi
+
+		if "${chmod_enable}"
+		then
+			chmod u+rwX,go+rX-w -R "${source_path}"
+		fi
+
+		subzip_args=''
+		if ! "${directories_enable}"
+		then
+			subzip_args='--no-directories'
+		fi
+
+		find "${source_path}" -print0 \
+			| drt-multitask -0 -I{} -P"$(nproc)" \
+				drt-zip --subzip ${subzip_args} -"${compression_level}" \
+					"${temp_dir}" {}
+
+		temp_zip_list="${temp_zip_dir}.list"
+		temp_subzip_list="${temp_zip_dir}-subzip.list"
+
+		cat "${temp_zip_list}" \
+			| sort --zero-terminated > "${temp_zip_list}-sorted"
+
+		mv "${temp_zip_list}-sorted" "${temp_zip_list}"
+
+		cat "${temp_zip_list}" \
+			| drt-multitask -0 -I{} -P1 \
+				drt-zip --writesubzip "${temp_dir}" {}
+
+		cat "${temp_subzip_list}" \
+			| drt-multitask -n50 -P1 \
+				zipmerge "${temp_zip_file}"
+
+		temp_compressor_list="${temp_zip_dir}-compressors.list"
+		sort "${temp_compressor_list}"
+		rm "${temp_compressor_list}"
+
+		touch --reference="${source_path}" "${temp_zip_file}"
+
+		mv "${temp_zip_file}" "${zip_file}"
+
+		find "${temp_zip_dir}" -not -type d -exec rm {} \;
+		rmdir "${temp_zip_dir}"
+
+		rm "${temp_zip_list}"
+		rm "${temp_subzip_list}"
+		rmdir "${temp_dir}"
+	fi
+fi
