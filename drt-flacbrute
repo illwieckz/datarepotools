@@ -1,4 +1,8 @@
-#! /bin/sh
+#! /usr/bin/env bash
+
+set -u
+set -e
+set -o pipefail
 
 ### Legal
 #
@@ -15,7 +19,7 @@ fi
 
 file_name="${1}"
 
-if [ -z "${TMPDIR}" ]
+if [ -z "${TMPDIR:-}" ]
 then
 	TMPDIR='/tmp'
 fi
@@ -24,6 +28,12 @@ temp_dir="$(mktemp -d "${TMPDIR}/drt-flacbrute-XXXXXXXX")"
 
 [ -z "${file_name}" ] && exit
 [ ! -f "${file_name}" ] && exit
+
+if [ "$(dd if="${file_name}" bs=4 count=1 status=none)" != 'fLaC' ]
+then
+	printf 'not a FLAC file: %s\n' "${file_name}" >&2
+	exit 1
+fi
 
 temp_file="$(mktemp "${temp_dir}/drt-flacbrute-XXXXXXXX.wav")"
 temp_flac="$(mktemp "${temp_dir}/drt-flacbrute-XXXXXXXX.flac")"
