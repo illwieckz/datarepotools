@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /usr/bin/env bash
 
 ### Legal
 #
@@ -7,5 +7,3 @@
 # 
 
 printf "export PATH=${PATH}:$(dirname "$(realpath "${0}")")"
-
-#EOF
