@@ -24,6 +24,44 @@ then
 	shift
 fi
 
+do_pngcrush='true'
+do_oxipng='true'
+do_oxipng_zopfli='false'
+do_pngwolf_zopfli='true'
+
+case "${1}" in
+	'-1')
+		do_pngcrush='true'
+		do_oxipng='false'
+		do_oxipng_zopfli='false'
+		do_pngwolf_zopfli='false'
+		shift
+		;;
+	'-2')
+		do_pngcrush='false'
+		do_oxipng='true'
+		do_oxipng_zopfli='false'
+		do_pngwolf_zopfli='false'
+		shift
+		;;
+	'-3')
+		do_pngcrush='false'
+		do_oxipng='true'
+		do_oxipng_zopfli='true'
+		do_pngwolf_zopfli='false'
+		shift
+		;;
+	'-4')
+		do_pngcrush='false'
+		do_oxipng='false'
+		do_oxipng_zopfli='false'
+		do_pngwolf_zopfli='true'
+		shift
+		;;
+	*)
+		;;
+esac
+
 if [ "${1}" = '-t' ]
 then
 	shift
@@ -47,7 +85,15 @@ isSmaller () {
 	size2="$(stat -c%s "${2}")"
 
 	[ "${size1}" -lt "${size2}" ]
-	true
+}
+
+useOrDeleteIfSmaller () {
+	if isSmaller "${1}" "${2}"
+	then
+		cp "${1}" "${2}"
+	fi
+
+	rm "${1}"
 }
 
 getSum () {
@@ -94,43 +140,53 @@ then
 else
 	convert "${temp_file}" +set comment -define png:exclude-chunks=date "${temp_file}"
 
-	# do not use oxipng --alpha
-	# alpha channel may still be used as a standalone component
-	oxipng --opt 6 --strip all "${temp_file}"
-
-	crush_file="$(mktemp "${temp_dir}/crushed-XXXXXXXX")"
-	pngcrush "${temp_file}" "${crush_file}"
-
-	if isSmaller "${crush_file}" "${temp_file}"
+	if "${do_pngcrush}"
 	then
-		cp "${crush_file}" "${temp_file}"
+		crush_file="$(mktemp "${temp_dir}/crushed-XXXXXXXX")"
+		pngcrush "${temp_file}" "${crush_file}"
+		useOrDeleteIfSmaller "${crush_file}" "${temp_file}"
 	fi
 
-	rm "${crush_file}"
+	if "${do_oxipng_zopfli}"
+	then
+		# do not use oxipng --alpha
+		# alpha channel may still be used as a standalone component
+		crush_file="$(mktemp "${temp_dir}/crushed-XXXXXXXX")"
+		oxipng --opt 6 --strip all --out "${crush_file}" "${temp_file}"
+		useOrDeleteIfSmaller "${crush_file}" "${temp_file}"
+	elif "${do_oxipng_zopfli}"
+	then
+		crush_file="$(mktemp "${temp_dir}/crushed-XXXXXXXX")"
+		oxipng --opt 6 --zopfli --strip all --out "${crush_file}" "${temp_file}"
+		useOrDeleteIfSmaller "${crush_file}" "${temp_file}"
+	fi
 
-	advpng_iter=1000
-	pngwolf_stagnate=1000
-#	pngwolf_stagnate=100
-#	pngwolf_stagnate=10
-	zopfli_iter=5000
+	if "${do_pngwolf_zopfli}"
+	then
+		advpng_iter=1000
+		pngwolf_stagnate=1000
+	#	pngwolf_stagnate=100
+	#	pngwolf_stagnate=10
+		zopfli_iter=5000
 
-	# 7zip
-	advpng -z -3 -i "${advpng_iter}" "${temp_file}"
-	touch -r "${file_name}" "${temp_file}"
+		# 7zip
+		advpng -z -3 -i "${advpng_iter}" "${temp_file}"
+		touch -r "${file_name}" "${temp_file}"
 
-	# GA + Zopfli
-	pngwolf --max-stagnate-time="${pngwolf_stagnate}" \
-		--out-deflate="zopfli,iter=${zopfli_iter},maxsplit=0,verbose=1" \
-		--in="${temp_file}" \
-		--out="${temp_file}"
+		# GA + Zopfli
+		pngwolf --max-stagnate-time="${pngwolf_stagnate}" \
+			--out-deflate="zopfli,iter=${zopfli_iter},maxsplit=0,verbose=1" \
+			--in="${temp_file}" \
+			--out="${temp_file}"
 
-#	if "${enable_zopfli}"
-#	then
-#		pngwolf --max-stagnate-time=1 \
-#			--out-deflate=zopfli,iter=5000,maxsplit=0,verbose=1 \
-#			--in="${temp_file}" \
-#			--out="${temp_file}"
-#	fi
+	#	if "${enable_zopfli}"
+	#	then
+	#		pngwolf --max-stagnate-time=1 \
+	#			--out-deflate=zopfli,iter=5000,maxsplit=0,verbose=1 \
+	#			--in="${temp_file}" \
+	#			--out="${temp_file}"
+	#	fi
+	fi
 
 	touch -r "${file_name}" "${temp_file}"
 
