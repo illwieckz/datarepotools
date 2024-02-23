@@ -87,8 +87,8 @@ doEncode () {
 }
 
 doSubZip () {
-	exec 2>/dev/null
-	exec >/dev/null
+#	exec 2>/dev/null
+#	exec >/dev/null
 
 	local temp_dir="${1}"; shift
 	local temp_zip_file="${temp_dir}/output.zip"
@@ -353,6 +353,23 @@ doSubZip () {
 		fi
 	fi
 
+	if [ "${drt_program_name}" = 'drt-zip' ]
+	then
+		# Doing other optimizations:
+		# 1. Some tools may write unnecessary metadata.
+		# 2. Some tools may compress file with `deflate` files that are
+		#    actually smaller with `store`.
+		case "${compression_level}" in
+			0)
+				advzip -z -0 "${zip_path}"
+				;;
+			*)
+				cpold "${zip_path}"
+				advzip -z -1 "${zip_path}"
+				;;
+		esac
+	fi
+
 	local temp_zip_list="${temp_zip_dir}.list"
 	touch "${temp_zip_list}"
 	printf '%s\0' "${file_path}" >> "${temp_zip_list}"
@@ -463,7 +480,7 @@ then
 
 		cat "${temp_subzip_list}" \
 			| drt-multitask -n50 -P1 \
-				zipmerge "${temp_zip_file}"
+				zipmerge -k "${temp_zip_file}"
 
 		temp_compressor_list="${temp_zip_dir}-compressors.list"
 		sort "${temp_compressor_list}"
