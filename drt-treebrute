@@ -106,7 +106,8 @@ cd .
 
 echo "rewriting tree converting blob to png"
 filter_dir="$(mktemp -d "${temp_dir}/drt-filter-XXXXXXXX")"
-git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][mM][pP]' '*.[tT][gG][aA]' '*.[wW][eE][bB][pP]' | drt-multitask -0 -P'${cpu_count}' -n1 drt-blobtopng -q" --tag-name-filter cat -- "${git_ref}"
+# git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][mM][pP]' '*.[tT][gG][aA]' '*.[wW][eE][bB][pP]' | drt-multitask -0 -P'${cpu_count}' -n1 drt-blobtopng -q" --tag-name-filter cat -- "${git_ref}"
+git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[bB][mM][pP]' '*.[tT][gG][aA]' | drt-multitask -0 -P'${cpu_count}' -n1 drt-blobtopng -q" --tag-name-filter cat -- "${git_ref}"
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "exporting png from tree"
@@ -116,7 +117,7 @@ git filter-branch -d "${filter_dir}" -f --tree-filter "git ls-files -z '*.[pP][n
 [ -d "${filter_dir}" ] && rm -R "${filter_dir}"
 
 echo "bruteforcing exported png"
-find "${export_dir}/" -type f -a -iname '*.png' -print0 | drt-multitask -0 "-P${cpu_lazy}" -n1 drt-pngbrute -q -t "${tag_name}"
+find "${export_dir}/" -type f -a -iname '*.png' -print0 | drt-multitask -0 "-P${cpu_lazy}" -n1 drt-pngbrute.old -q -t "${tag_name}"
 
 [ -d "${export_dir}" ] && rm -R "${export_dir}"
 
