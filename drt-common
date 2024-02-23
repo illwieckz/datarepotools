@@ -1,0 +1,27 @@
+#! /bin/echo must be sourced this way: .
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+if [ -z "${INCLUDED_DRT_COMMON:-}" ]
+then
+	_error () {
+		string="${1}"
+		shift
+
+		printf "${string}\n" "${@}" >&2
+		false
+	}
+
+	if [ -z "${TMPDIR:-}" ]
+	then
+		export TMPDIR="$(dirname "$(mktemp -u)")"
+	fi
+
+	export INCLUDED_DRT_COMMON='true'
+fi
+
+export drt_program_name="$(basename "$(realpath "${0}")")"
