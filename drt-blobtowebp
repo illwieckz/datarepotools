@@ -1,0 +1,135 @@
+#! /bin/sh
+
+### Legal
+#
+# Author:  Thomas Debesse <dev@illwieckz.net>
+# License: ISC
+# 
+
+if [ "${1}" = '-q' ]
+then
+	exec 1>/dev/null
+	exec 2>/dev/null
+	shift
+fi
+
+force_conversion='false'
+if [ "${1}" = '-f' ]
+then
+	force_conversion='true'
+	shift
+fi
+
+keep_original='false'
+if [ "${1}" = '-k' ]
+then
+	keep_original='true'
+	shift
+fi
+
+file_name="${1}"
+
+if [ -z "${TMPDIR}" ]
+then
+	TMPDIR='/tmp'
+fi
+
+temp_dir="$(mktemp -d "${TMPDIR}/drt-blob2png-XXXXXXXX")"
+
+[ -z "${file_name}" ] && exit
+[ ! -f "${file_name}" ] && exit
+
+_convert () {
+	local temp_out="$(mktemp "${temp_dir}/out-XXXXXXXX.txt")"
+	local temp_png="$(mktemp -u "${temp_dir}/tmp-XXXXXXXX.png")"
+
+	if echo "${1}" | grep -q -i -e '\.tga$'
+	then
+		if ! drt-imageconvert "${1}" "${temp_png}"
+		then
+			printf 'failure'
+		fi
+	else
+		if convert "${1}" "${temp_png}" >"${temp_out}" 2>&1
+		then
+			if grep -q 'lossy' "${temp_out}"
+			then
+				printf 'lossy'
+			fi
+		else
+			printf 'failure'
+		fi
+	fi
+
+	cwebp -mt -lossless -exact -z 9 "${temp_png}" -o "${2}"
+	touch -r "${1}" "${2}"
+
+	rm "${temp_png}"
+	rm "${temp_out}"
+}
+
+_blob2webp () {
+	local orig_file="${1}"
+	local new_name="$(echo "${orig_file}" | sed -e 's/\.png$/.webp/I;s/\.tga/.webp/I;s/\.bmp$/.webp/I')"
+	local temp_file="$(mktemp "${temp_dir}/blob-XXXXXXXX.webp")"
+	
+	local do_convert='false'
+	local output="$(_convert "${orig_file}" "${temp_file}")"
+
+	if [ "${output}" = 'failure' ]
+	then
+		printf 'conversion failed\n'
+	elif [ "${result}" != "lossy" ]
+	then
+		do_convert='true'
+	elif "${force_conversion}"
+	then
+		echo "lossy: force conversion"
+		do_convert='true'
+	else
+		echo "lossy: do not convert to webp, use -f to force conversion"
+	fi
+
+	if "${do_convert}"
+	then
+		do_convert='true'
+		cp -avn "${temp_file}" "${new_name}"
+		if "${keep_original}"
+		then
+			echo "keep original: ${orig_file}"
+		else
+			rm -v "${orig_file}"
+		fi
+	fi
+
+	rm "${temp_file}"
+}
+
+_testfmt () {
+	file -b "${1}" | grep -q "${2}"
+}
+
+echo "${file_name}"
+
+if _testfmt "${file_name}" 'PNG image data'
+then
+	_blob2webp "${file_name}"
+elif _testfmt "${file_name}" 'PC bitmap'
+then
+	_blob2webp "${file_name}"
+elif _testfmt "${file_name}" 'Targa image data'
+then
+	_blob2webp "${file_name}"
+elif strings "${file_name}" | grep -q 'TRUEVISION-XFILE'
+then
+	echo "bizarre tga format: convert anyway"
+	_blob2webp "${file_name}"
+# elif "${force_conversion}"
+# then
+#	echo "unknown: force conversion"
+#	_blob2webp "${file_name}"
+fi
+
+rmdir "${temp_dir}"
+
+#EOF
