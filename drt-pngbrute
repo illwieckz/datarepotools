@@ -154,7 +154,7 @@ else
 		crush_file="$(mktemp "${temp_dir}/crushed-XXXXXXXX")"
 		oxipng --opt 6 --strip all --out "${crush_file}" "${temp_file}"
 		useOrDeleteIfSmaller "${crush_file}" "${temp_file}"
-	elif "${do_oxipng_zopfli}"
+	elif "${do_oxipng}"
 	then
 		crush_file="$(mktemp "${temp_dir}/crushed-XXXXXXXX")"
 		oxipng --opt 6 --zopfli --strip all --out "${crush_file}" "${temp_file}"
