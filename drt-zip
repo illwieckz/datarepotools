@@ -187,14 +187,20 @@ doSubZip () {
 				true
 			else
 				file_size="$(stat -c '%s' "${file_path}")"
-				# ≤ 50M
-				if [ "${file_size}" -le 50000 ]
+				# ≤ 10M
+				if [ "${file_size}" -le 10000 ]
 				then
-					advzip_iter='100'
-				# ≤ 5M
-				elif [ "${file_size}" -le 5000 ]
+					advzip_iter='5000'
+				# ≤ 50M
+				elif [ "${file_size}" -le 50000 ]
 				then
 					advzip_iter='1000'
+				# ≤ 100M
+				elif [ "${file_size}" -le 100000 ]
+				then
+					advzip_iter='500'
+				else
+					advzip_iter='100'
 				fi
 			fi
 			;;
