@@ -388,10 +388,13 @@ doSubZip () {
 		#    actually smaller with `store`.
 		case "${compression_level}" in
 			0)
-				advzip -z -0 "${zip_path}"
+				# > If the -0 option is specified the archive is always rewritten without any compression.
+				advzip --recompress --shrink-store "${zip_path}"
 				;;
 			*)
-				advzip -z -1 "${zip_path}"
+				# > If the -1, -2, -3, -4 options are specified, it's used the smallest file choice
+				# > from: the previous compressed data, the new compression and the uncompressed format.
+				advzip --recompress --shrink-fast "${zip_path}"
 				;;
 		esac
 	fi
