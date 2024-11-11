@@ -50,7 +50,7 @@ echo "temp_zip_file: ${temp_zip_file}"
 
 	cd "${temp_zip_dir}"
 
-	7za x "${zip_file}"
+	7za x -snld "${zip_file}"
 
 	if "${touch_enable}"
 	then
