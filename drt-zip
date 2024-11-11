@@ -274,15 +274,20 @@ doSubZip () {
 
 	local op="${SIZE_COMPARISON_OPERATOR:-le}"
 
-	local preferred_compressor='zip'
+	local compressor_name='zip'
+	local preferred_compressor="${compressor_name}"
 	local zip_file_size="$(stat -c '%s' "${zip_path}")"
-	local zip_other_size
+	local zip_other_size="${zip_file_size}"
+	local size_list="${compressor_name}:${zip_other_size}"
+
 	if [ -f "${zip_7z_default_path}" ]
 	then
 		zip_other_size="$(stat -c '%s' "${zip_7z_default_path}")"
+		compressor_name='7za-default'
+		size_list+=" ${compressor_name}:${zip_other_size}"
 		if [ "${zip_other_size}" "-${op}" "${zip_file_size}" ]
 		then
-			preferred_compressor='7za-default'
+			preferred_compressor="${compressor_name}"
 			zip_file_size="${zip_other_size}"
 			mv "${zip_7z_default_path}" "${zip_path}"
 		else
@@ -293,9 +298,11 @@ doSubZip () {
 	if [ -f "${zip_7z_more_path}" ]
 	then
 		zip_other_size="$(stat -c '%s' "${zip_7z_more_path}")"
+		compressor_name='7za-more'
+		size_list+=" ${compressor_name}:${zip_other_size}"
 		if [ "${zip_other_size}" "-${op}" "${zip_file_size}" ]
 		then
-			preferred_compressor='7za-more'
+			preferred_compressor="${compressor_name}"
 			zip_file_size="${zip_other_size}"
 			mv "${zip_7z_more_path}" "${zip_path}"
 		else
@@ -306,9 +313,11 @@ doSubZip () {
 	if [ -f "${zip_7z_extra_path}" ]
 	then
 		zip_other_size="$(stat -c '%s' "${zip_7z_extra_path}")"
+		compressor_name='7za-extra'
+		size_list+=" ${compressor_name}:${zip_other_size}"
 		if [ "${zip_other_size}" "-${op}" "${zip_file_size}" ]
 		then
-			preferred_compressor='7za-extra'
+			preferred_compressor="${compressor_name}"
 			zip_file_size="${zip_other_size}"
 			mv "${zip_7z_extra_path}" "${zip_path}"
 		else
@@ -319,9 +328,11 @@ doSubZip () {
 	if [ -f "${zip_advzip_default_path}" ]
 	then
 		zip_other_size="$(stat -c '%s' "${zip_advzip_default_path}")"
+		compressor_name='advzip-default'
+		size_list+=" ${compressor_name}:${zip_other_size}"
 		if [ "${zip_other_size}" "-${op}" "${zip_file_size}" ]
 		then
-			preferred_compressor='advzip-default'
+			preferred_compressor="${compressor_name}"
 			zip_file_size="${zip_other_size}"
 			mv "${zip_advzip_default_path}" "${zip_path}"
 		else
@@ -332,9 +343,11 @@ doSubZip () {
 	if [ -f "${zip_advzip_more_path}" ]
 	then
 		zip_other_size="$(stat -c '%s' "${zip_advzip_more_path}")"
+		compressor_name='advzip-more'
+		size_list+=" ${compressor_name}:${zip_other_size}"
 		if [ "${zip_other_size}" "-${op}" "${zip_file_size}" ]
 		then
-			preferred_compressor='advzip-more'
+			preferred_compressor="${compressor_name}"
 			zip_file_size="${zip_other_size}"
 			mv "${zip_advzip_more_path}" "${zip_path}"
 		else
@@ -345,9 +358,11 @@ doSubZip () {
 	if [ -f "${zip_advzip_extra_path}" ]
 	then
 		zip_other_size="$(stat -c '%s' "${zip_advzip_extra_path}")"
+		compressor_name='advzip-extra'
+		size_list+=" ${compressor_name}:${zip_other_size}"
 		if [ "${zip_other_size}" "-${op}" "${zip_file_size}" ]
 		then
-			preferred_compressor='advzip-extra'
+			preferred_compressor="${compressor_name}"
 			zip_file_size="${zip_other_size}"
 			mv "${zip_advzip_extra_path}" "${zip_path}"
 		else
@@ -382,7 +397,7 @@ doSubZip () {
 
 	local temp_compressor_list="${temp_zip_dir}-compressors.list"
 	touch "${temp_compressor_list}"
-	printf '%s\t%s\n' "${file_path}" "${preferred_compressor}" >> "${temp_compressor_list}"
+	printf '%s\t%s (%s)\n' "${file_path}" "${preferred_compressor}" "${size_list}" >> "${temp_compressor_list}"
 }
 
 doWriteSubZip () {
