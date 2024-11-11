@@ -353,7 +353,11 @@ doSubZip () {
 		fi
 	fi
 
-	if [ "${drt_program_name}" = 'drt-zip' ]
+	if "${is_empty}"
+	then
+		# Skip empty file because advzip crashes with empty file.
+		true
+	elif [ "${drt_program_name}" = 'drt-zip' ]
 	then
 		# Doing other optimizations:
 		# 1. Some tools may write unnecessary metadata.
