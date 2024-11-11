@@ -272,13 +272,15 @@ doSubZip () {
 
 	wait
 
+	local op="${SIZE_COMPARISON_OPERATOR:-le}"
+
 	local preferred_compressor='zip'
 	local zip_file_size="$(stat -c '%s' "${zip_path}")"
 	local zip_other_size
 	if [ -f "${zip_7z_default_path}" ]
 	then
 		zip_other_size="$(stat -c '%s' "${zip_7z_default_path}")"
-		if [ "${zip_other_size}" -lt "${zip_file_size}" ]
+		if [ "${zip_other_size}" "-${op}" "${zip_file_size}" ]
 		then
 			preferred_compressor='7za-default'
 			zip_file_size="${zip_other_size}"
@@ -291,7 +293,7 @@ doSubZip () {
 	if [ -f "${zip_7z_more_path}" ]
 	then
 		zip_other_size="$(stat -c '%s' "${zip_7z_more_path}")"
-		if [ "${zip_other_size}" -lt "${zip_file_size}" ]
+		if [ "${zip_other_size}" "-${op}" "${zip_file_size}" ]
 		then
 			preferred_compressor='7za-more'
 			zip_file_size="${zip_other_size}"
@@ -304,7 +306,7 @@ doSubZip () {
 	if [ -f "${zip_7z_extra_path}" ]
 	then
 		zip_other_size="$(stat -c '%s' "${zip_7z_extra_path}")"
-		if [ "${zip_other_size}" -lt "${zip_file_size}" ]
+		if [ "${zip_other_size}" "-${op}" "${zip_file_size}" ]
 		then
 			preferred_compressor='7za-extra'
 			zip_file_size="${zip_other_size}"
@@ -317,7 +319,7 @@ doSubZip () {
 	if [ -f "${zip_advzip_default_path}" ]
 	then
 		zip_other_size="$(stat -c '%s' "${zip_advzip_default_path}")"
-		if [ "${zip_other_size}" -lt "${zip_file_size}" ]
+		if [ "${zip_other_size}" "-${op}" "${zip_file_size}" ]
 		then
 			preferred_compressor='advzip-default'
 			zip_file_size="${zip_other_size}"
@@ -330,7 +332,7 @@ doSubZip () {
 	if [ -f "${zip_advzip_more_path}" ]
 	then
 		zip_other_size="$(stat -c '%s' "${zip_advzip_more_path}")"
-		if [ "${zip_other_size}" -lt "${zip_file_size}" ]
+		if [ "${zip_other_size}" "-${op}" "${zip_file_size}" ]
 		then
 			preferred_compressor='advzip-more'
 			zip_file_size="${zip_other_size}"
@@ -343,7 +345,7 @@ doSubZip () {
 	if [ -f "${zip_advzip_extra_path}" ]
 	then
 		zip_other_size="$(stat -c '%s' "${zip_advzip_extra_path}")"
-		if [ "${zip_other_size}" -lt "${zip_file_size}" ]
+		if [ "${zip_other_size}" "-${op}" "${zip_file_size}" ]
 		then
 			preferred_compressor='advzip-extra'
 			zip_file_size="${zip_other_size}"
