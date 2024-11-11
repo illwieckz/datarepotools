@@ -385,7 +385,6 @@ doSubZip () {
 				advzip -z -0 "${zip_path}"
 				;;
 			*)
-				cpold "${zip_path}"
 				advzip -z -1 "${zip_path}"
 				;;
 		esac
