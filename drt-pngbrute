@@ -26,7 +26,7 @@ fi
 
 do_pngcrush='true'
 do_oxipng='true'
-do_oxipng_zopfli='false'
+do_oxipng_zopfli='true'
 do_pngwolf_zopfli='true'
 
 case "${1}" in
@@ -46,7 +46,7 @@ case "${1}" in
 		;;
 	'-3')
 		do_pngcrush='false'
-		do_oxipng='true'
+		do_oxipng='false'
 		do_oxipng_zopfli='true'
 		do_pngwolf_zopfli='false'
 		shift
@@ -55,6 +55,13 @@ case "${1}" in
 		do_pngcrush='false'
 		do_oxipng='false'
 		do_oxipng_zopfli='false'
+		do_pngwolf_zopfli='true'
+		shift
+		;;
+	'-5')
+		do_pngcrush='true'
+		do_oxipng='true'
+		do_oxipng_zopfli='true'
 		do_pngwolf_zopfli='true'
 		shift
 		;;
@@ -147,14 +154,16 @@ else
 		useOrDeleteIfSmaller "${crush_file}" "${temp_file}"
 	fi
 
-	if "${do_oxipng_zopfli}"
+	if "${do_oxipng}"
 	then
 		# do not use oxipng --alpha
 		# alpha channel may still be used as a standalone component
 		crush_file="$(mktemp "${temp_dir}/crushed-XXXXXXXX")"
 		oxipng --opt 6 --strip all --out "${crush_file}" "${temp_file}"
 		useOrDeleteIfSmaller "${crush_file}" "${temp_file}"
-	elif "${do_oxipng}"
+	fi
+
+	if "${do_oxipng_zopfli}"
 	then
 		crush_file="$(mktemp "${temp_dir}/crushed-XXXXXXXX")"
 		oxipng --opt 6 --zopfli --strip all --out "${crush_file}" "${temp_file}"
