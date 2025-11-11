@@ -150,8 +150,17 @@ else
 	if "${do_pngcrush}"
 	then
 		crush_file="$(mktemp "${temp_dir}/crushed-XXXXXXXX")"
-		pngcrush "${temp_file}" "${crush_file}"
-		useOrDeleteIfSmaller "${crush_file}" "${temp_file}"
+		pngcrush "${temp_file}" "${crush_file}" || true
+
+		# It can happen that pngcrush fails but doesn't return
+		# an error code and write an empty file, so we should
+		# not use that empty file as if it was the optimized one.
+		if [ "$(du -b "${crush_file}" | cut -f1 -d$'\t')" = '0' ]
+		then
+			rm "${crush_file}"
+		else
+			useOrDeleteIfSmaller "${crush_file}" "${temp_file}"
+		fi
 	fi
 
 	if "${do_oxipng}"
@@ -179,8 +188,11 @@ else
 		zopfli_iter=5000
 
 		# 7zip
-		advpng -z -3 -i "${advpng_iter}" "${temp_file}"
-		touch -r "${file_name}" "${temp_file}"
+		# It can happens sometime that advpng fails.
+		if advpng -z -3 -i "${advpng_iter}" "${temp_file}"
+		then
+			touch -r "${file_name}" "${temp_file}"
+		fi
 
 		# GA + Zopfli
 		pngwolf --max-stagnate-time="${pngwolf_stagnate}" \
