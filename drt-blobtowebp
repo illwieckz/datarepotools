@@ -106,7 +106,7 @@ _blob2webp () {
 			exiftool -overwrite_original -TagsFromFile "${orig_file}" -all:all "${temp_file}"
 		fi
 
-		cp -avn "${temp_file}" "${new_name}"
+		cp -av --update=none "${temp_file}" "${new_name}"
 		if "${keep_original}"
 		then
 			echo "keep original: ${orig_file}"
