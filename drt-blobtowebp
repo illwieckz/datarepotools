@@ -88,7 +88,7 @@ _blob2webp () {
 	if [ "${output}" = 'failure' ]
 	then
 		printf 'conversion failed\n'
-	elif [ "${result}" != "lossy" ]
+	elif [ "${output}" != "lossy" ]
 	then
 		conversion_done='true'
 	elif "${force_conversion}"
