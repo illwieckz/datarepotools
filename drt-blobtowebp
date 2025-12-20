@@ -82,7 +82,7 @@ _blob2webp () {
 	local new_name="$(echo "${orig_file}" | sed -e 's/\.png$/.webp/I;s/\.tga/.webp/I;s/\.bmp$/.webp/I')"
 	local temp_file="$(mktemp "${temp_dir}/blob-XXXXXXXX.webp")"
 	
-	local do_convert='false'
+	local conversion_done='false'
 	local output="$(_convert "${orig_file}" "${temp_file}")"
 
 	if [ "${output}" = 'failure' ]
@@ -90,19 +90,17 @@ _blob2webp () {
 		printf 'conversion failed\n'
 	elif [ "${result}" != "lossy" ]
 	then
-		do_convert='true'
+		conversion_done='true'
 	elif "${force_conversion}"
 	then
 		echo "lossy: force conversion"
-		do_convert='true'
+		conversion_done='true'
 	else
 		echo "lossy: do not convert to webp, use -f to force conversion"
 	fi
 
-	if "${do_convert}"
+	if "${conversion_done}"
 	then
-		do_convert='true'
-
 		if "${copy_metadata}"
 		then
 			exiftool -overwrite_original -TagsFromFile "${orig_file}" -all:all "${temp_file}"
