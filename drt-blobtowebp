@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /usr/bin/env bash
 
 ### Legal
 #
@@ -6,7 +6,9 @@
 # License: ISC
 # 
 
-if [ "${1}" = '-q' ]
+set -u -e -o pipefail
+
+if [ "${1:-}" = '-q' ]
 then
 	exec 1>/dev/null
 	exec 2>/dev/null
@@ -14,21 +16,21 @@ then
 fi
 
 force_conversion='false'
-if [ "${1}" = '-f' ]
+if [ "${1:-}" = '-f' ]
 then
 	force_conversion='true'
 	shift
 fi
 
 keep_original='false'
-if [ "${1}" = '-k' ]
+if [ "${1:-}" = '-k' ]
 then
 	keep_original='true'
 	shift
 fi
 
 copy_metadata='false'
-if [ "${1}" = '-m' ]
+if [ "${1:-}" = '-m' ]
 then
 	copy_metadata='true'
 	shift
