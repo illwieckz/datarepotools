@@ -38,10 +38,7 @@ fi
 
 file_name="${1}"
 
-if [ -z "${TMPDIR}" ]
-then
-	TMPDIR='/tmp'
-fi
+TMPDIR="${TMPDIR:-/tmp}"
 
 temp_dir="$(mktemp -d "${TMPDIR}/drt-blob2png-XXXXXXXX")"
 
