@@ -25,27 +25,30 @@ then
 fi
 
 do_pngcrush='true'
+do_advpng='true'
+do_advpng_zopfli='false'
 do_oxipng='false'
 do_oxipng_zopfli='true'
-do_advpng='true'
 do_pngwolf='false'
 do_pngwolf_zopfli='true'
 
 case "${1}" in
-	'-a')
+	'-a'|'-all')
 		do_pngcrush='true'
+		do_advpng='true'
+		do_advpng_zopfli='false'
 		do_oxipng='false'
 		do_oxipng_zopfli='true'
-		do_advpng='true'
 		do_pngwolf='false'
 		do_pngwolf_zopfli='true'
 		shift
 		;;
 	'--pngcrush')
 		do_pngcrush='true'
+		do_advpng='false'
+		do_advpng_zopfli='false'
 		do_oxipng='false'
 		do_oxipng_zopfli='false'
-		do_advpng='false'
 		do_pngwolf='false'
 		do_pngwolf_zopfli='false'
 		shift
@@ -53,44 +56,59 @@ case "${1}" in
 	'--advpng')
 		do_pngcrush='false'
 		do_oxipng='false'
-		do_oxipng_zopfli='false'
 		do_advpng='true'
+		do_advpng_zopfli='false'
+		do_oxipng_zopfli='false'
+		do_pngwolf='false'
+		do_pngwolf_zopfli='false'
+		shift
+		;;
+	'--advpng')
+		do_pngcrush='false'
+		do_oxipng='false'
+		do_advpng='false'
+		do_advpng_zopfli='true'
+		do_oxipng_zopfli='false'
 		do_pngwolf='false'
 		do_pngwolf_zopfli='false'
 		shift
 		;;
 	'--oxipng')
 		do_pngcrush='false'
+		do_advpng='false'
+		do_advpng_zopfli='false'
 		do_oxipng='true'
 		do_oxipng_zopfli='false'
-		do_advpng='false'
 		do_pngwolf='false'
 		do_pngwolf_zopfli='false'
 		shift
 		;;
 	'--oxipng-zopfli')
 		do_pngcrush='false'
+		do_advpng='false'
+		do_advpng_zopfli='false'
 		do_oxipng='false'
 		do_oxipng_zopfli='true'
-		do_advpng='false'
 		do_pngwolf='false'
 		do_pngwolf_zopfli='false'
 		shift
 		;;
 	'--pngwolf')
 		do_pngcrush='false'
+		do_advpng='false'
+		do_advpng_zopfli='false'
 		do_oxipng='false'
 		do_oxipng_zopfli='false'
-		do_advpng='false'
 		do_pngwolf='true'
 		do_pngwolf_zopfli='false'
 		shift
 		;;
 	'--pngwolf-zopfli')
 		do_pngcrush='false'
+		do_advpng='false'
+		do_advpng_zopfli='false'
 		do_oxipng='false'
 		do_oxipng_zopfli='false'
-		do_advpng='false'
 		do_pngwolf='false'
 		do_pngwolf_zopfli='true'
 		shift
@@ -220,6 +238,59 @@ then
 	cp -a --reflink=auto "${cache_file}" "${file_name}"
 fi
 
+runCrusher () {
+	local do="${1}"; shift
+	local task="${1}"; shift
+
+	if "${do}"
+	then
+		echo "== processing ${file_name} with ${task} =="
+
+		crush_file="$(mktemp "${temp_dir}/${task}-XXXXXXXX.png")"
+
+		local advpng_iter=1000
+		local advpng_zopfli_iter=1000
+		local pngwolf_stagnate=1000
+		local pngwolf_zopfli_iter=5000
+
+		case "${task}" in
+			'pngcrush')
+				# It can happen that pngcrush fails but doesn't return
+				# an error code and write an empty file or even return
+				# an invalid file.
+				pngcrush "${temp_file}" "${crush_file}" || true
+			;;
+			'advpng')
+				# It can happens sometime that advpng fails.
+				# > Error reading the signature on file.png [at void throw_png_error():pngex.h:37]
+				advpng -z -3 -i "${advpng_iter}" "${crush_file}" || true
+			;;
+			'advpng-zopfli')
+				advpng -z -4 -i "${advpng_zopfli_iter}" "${crush_file}" || true
+			;;
+			'oxipng')
+				# Do not use `oxipng --alpha` because the alpha channel
+				# may still be used as a standalone component.
+				oxipng --opt 6 --strip all --out "${crush_file}" "${temp_file}"
+			;;
+			'oxipng-zopfli')
+				oxipng --opt 6 --zopfli --strip all --out "${crush_file}" "${temp_file}"
+			;;
+			'pngwolf')
+				pngwolf --max-stagnate-time="${pngwolf_stagnate}" \
+					--in="${temp_file}" \
+					--out="${crush_file}"
+			;;
+			'pngwolf-zopfli')
+				pngwolf --max-stagnate-time="${pngwolf_stagnate}" \
+					--out-deflate="zopfli,iter=${pngwolf_zopfli_iter},maxsplit=0,verbose=1" \
+					--in="${temp_file}" \
+					--out="${crush_file}"
+			;;
+		esac
+	fi
+}
+
 if [ ! -f "${cache_file}" ]
 then
 	convert "${temp_file}" +set comment -define png:exclude-chunks=date "${temp_file}"
@@ -227,65 +298,13 @@ then
 
 	crush_files=()
 
-	if "${do_pngcrush}"
-	then
-		crush_file="$(mktemp "${temp_dir}/pngcrush-XXXXXXXX.png")"
-		# It can happen that pngcrush fails but doesn't return
-		# an error code and write an empty file or even return
-		# an invalid file.
-		pngcrush "${temp_file}" "${crush_file}" || true
-		preferFile "${crush_file}" "${temp_file}"
-	fi
-
-	if "${do_oxipng}"
-	then
-		crush_file="$(mktemp "${temp_dir}/oxipng-XXXXXXXX.png")"
-		# Do not use `oxipng --alpha` because the alpha channel
-		# may still be used as a standalone component.
-		oxipng --opt 6 --strip all --out "${crush_file}" "${temp_file}"
-		preferFile "${crush_file}" "${temp_file}"
-	fi
-
-	if "${do_oxipng_zopfli}"
-	then
-		crush_file="$(mktemp "${temp_dir}/oxipng-zopfli-XXXXXXXX.png")"
-		oxipng --opt 6 --zopfli --strip all --out "${crush_file}" "${temp_file}"
-		preferFile "${crush_file}" "${temp_file}"
-	fi
-
-	if "${do_advpng}"
-	then
-		advpng_iter=1000
-		crush_file="$(mktemp "${temp_dir}/advpng-XXXXXXXX.png")"
-		# It can happens sometime that advpng fails.
-		# > Error reading the signature on file.png [at void throw_png_error():pngex.h:37]
-		advpng -z -3 -i "${advpng_iter}" "${crush_file}" || true
-		preferFile "${crush_file}" "${temp_file}"
-	fi
-
-	if "${do_pngwolf}"
-	then
-		pngwolf_stagnate=1000
-
-		crush_file="$(mktemp "${temp_dir}/pngwolf-XXXXXXXX.png")"
-		pngwolf --max-stagnate-time="${pngwolf_stagnate}" \
-			--in="${temp_file}" \
-			--out="${crush_file}"
-		preferFile "${crush_file}" "${temp_file}"
-	fi
-
-	if "${do_pngwolf_zopfli}"
-	then
-		pngwolf_stagnate=1000
-		pngwolf_zopfli_iter=5000
-
-		crush_file="$(mktemp "${temp_dir}/pngwolf-zopfli-XXXXXXXX.png")"
-		pngwolf --max-stagnate-time="${pngwolf_stagnate}" \
-			--out-deflate="zopfli,iter=${pngwolf_zopfli_iter},maxsplit=0,verbose=1" \
-			--in="${temp_file}" \
-			--out="${crush_file}"
-		preferFile "${crush_file}" "${temp_file}"
-	fi
+	runCrusher "${do_pngcrush}" 'pngcrush'
+	runCrusher "${do_advpng}" 'advpng'
+	runCrusher "${do_advpng_zopfli}" 'advpng-zopfli'
+	runCrusher "${do_oxipng}" 'oxipng'
+	runCrusher "${do_oxipng_zopfli}" 'oxipng-zopfli'
+	runCrusher "${do_pngwolf}" 'pngwolf'
+	runCrusher "${do_pngwolf_zopfli}" 'pngwolf-zopfli'
 
 	touch -r "${file_name}" "${temp_file}"
 
