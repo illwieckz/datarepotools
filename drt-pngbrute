@@ -211,7 +211,7 @@ file_sum="$(getRgbaSum "${file_name}")"
 temp_file="$(mktemp "${temp_dir}/png-XXXXXXXX.png")"
 cp -a --reflink=auto "${file_name}" "${temp_file}"
 
-oxipng --opt 0 --interlace 0 --strip all "${temp_file}"
+oxipng --opt 0 --interlace 0 --strip safe "${temp_file}"
 checkFile "${temp_file}"
 
 cache_file="$(find "${cache_basedir}" -type f -name "${file_sum}" | tail -n1)"
@@ -271,10 +271,10 @@ runCrusher () {
 			'oxipng')
 				# Do not use `oxipng --alpha` because the alpha channel
 				# may still be used as a standalone component.
-				oxipng --opt 6 --strip all --out "${crush_file}" "${temp_file}"
+				oxipng --opt 6 --strip safe --out "${crush_file}" "${temp_file}"
 			;;
 			'oxipng-zopfli')
-				oxipng --opt 6 --zopfli --strip all --out "${crush_file}" "${temp_file}"
+				oxipng --opt 6 --zopfli --strip safe --out "${crush_file}" "${temp_file}"
 			;;
 			'pngwolf')
 				pngwolf --max-stagnate-time="${pngwolf_stagnate}" \
