@@ -288,6 +288,8 @@ runCrusher () {
 					--out="${crush_file}"
 			;;
 		esac
+
+		preferFile "${crush_file}" "${temp_file}"
 	fi
 }
 
