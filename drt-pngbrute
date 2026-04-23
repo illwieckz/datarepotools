@@ -6,7 +6,7 @@
 # License: ISC
 # 
 
-set -e
+set -u -e -o pipefail
 
 tag_name='.'
 
@@ -25,43 +25,73 @@ then
 fi
 
 do_pngcrush='true'
-do_oxipng='true'
+do_oxipng='false'
 do_oxipng_zopfli='true'
+do_advpng='true'
+do_pngwolf='false'
 do_pngwolf_zopfli='true'
 
 case "${1}" in
-	'-1')
+	'-a')
 		do_pngcrush='true'
 		do_oxipng='false'
-		do_oxipng_zopfli='false'
-		do_pngwolf_zopfli='false'
-		shift
-		;;
-	'-2')
-		do_pngcrush='false'
-		do_oxipng='true'
-		do_oxipng_zopfli='false'
-		do_pngwolf_zopfli='false'
-		shift
-		;;
-	'-3')
-		do_pngcrush='false'
-		do_oxipng='false'
 		do_oxipng_zopfli='true'
-		do_pngwolf_zopfli='false'
-		shift
-		;;
-	'-4')
-		do_pngcrush='false'
-		do_oxipng='false'
-		do_oxipng_zopfli='false'
+		do_advpng='true'
+		do_pngwolf='false'
 		do_pngwolf_zopfli='true'
 		shift
 		;;
-	'-5')
+	'--pngcrush')
 		do_pngcrush='true'
+		do_oxipng='false'
+		do_oxipng_zopfli='false'
+		do_advpng='false'
+		do_pngwolf='false'
+		do_pngwolf_zopfli='false'
+		shift
+		;;
+	'--advpng')
+		do_pngcrush='false'
+		do_oxipng='false'
+		do_oxipng_zopfli='false'
+		do_advpng='true'
+		do_pngwolf='false'
+		do_pngwolf_zopfli='false'
+		shift
+		;;
+	'--oxipng')
+		do_pngcrush='false'
 		do_oxipng='true'
+		do_oxipng_zopfli='false'
+		do_advpng='false'
+		do_pngwolf='false'
+		do_pngwolf_zopfli='false'
+		shift
+		;;
+	'--oxipng-zopfli')
+		do_pngcrush='false'
+		do_oxipng='false'
 		do_oxipng_zopfli='true'
+		do_advpng='false'
+		do_pngwolf='false'
+		do_pngwolf_zopfli='false'
+		shift
+		;;
+	'--pngwolf')
+		do_pngcrush='false'
+		do_oxipng='false'
+		do_oxipng_zopfli='false'
+		do_advpng='false'
+		do_pngwolf='true'
+		do_pngwolf_zopfli='false'
+		shift
+		;;
+	'--pngwolf-zopfli')
+		do_pngcrush='false'
+		do_oxipng='false'
+		do_oxipng_zopfli='false'
+		do_advpng='false'
+		do_pngwolf='false'
 		do_pngwolf_zopfli='true'
 		shift
 		;;
@@ -97,14 +127,52 @@ isSmaller () {
 useOrDeleteIfSmaller () {
 	if isSmaller "${1}" "${2}"
 	then
-		cp "${1}" "${2}"
+		touch -r "${2}" "${1}"
+		cp -a --reflink=auto "${1}" "${2}"
 	fi
 
 	rm "${1}"
+
+	sync
 }
 
 getSum () {
 	sha512sum "${1}" | cut -f1 -d' '
+}
+
+getRgbaSum () {
+	local rgba_file="$(mktemp "${temp_dir}/rgba-XXXXXXXX.rgba")"
+	convert "${1}" "${rgba_file}"
+	getSum "${rgba_file}"
+	rm "${rgba_file}"
+}
+
+checkFile () {
+	case "$(getRgbaSum "${1}")" in
+		"${file_sum}");;
+		*)
+			echo "ERROR: invalid RGBA stream after conversion in ${1}" >&2
+			false
+		;;
+	esac
+}
+
+preferFile () {
+	if [ -f "${1}" ]
+	then
+		# It can happen that pngcrush fails but doesn't return
+		# an error code and write an empty file, so we should
+		# not use that empty file as if it was the optimized one.
+		if [ "$(du -b "${1}" | cut -f1 -d$'\t')" = '0' ]
+		then
+			rm "${1}"
+		# It can happen that pngcrush writes an invalid file,
+		# we should not use it.
+		elif checkFile "${1}"
+		then
+			useOrDeleteIfSmaller "${1}" "${2}"
+		fi
+	fi
 }
 
 TMPDIR="${TMPDIR-/tmp}"
@@ -115,26 +183,32 @@ cache_basepath="pngbrute";
 cache_basedir="$(realpath "${XDG_CACHE_HOME:-${HOME}/.cache}/${cache_basepath}")";
 cache_dir="$(realpath "${XDG_CACHE_HOME:-${HOME}/.cache}/${cache_basepath}/${tag_name}")";
 
-temp_file="$(mktemp "${temp_dir}/png-XXXXXXXX.png")"
-rgba_file="$(mktemp "${temp_dir}/rgba-XXXXXXXX.rgba")"
-
 mkdir -p "${cache_dir}"
 echo "= PNGBRUTE ========= ${file_name}"
 
 mkdir -p "${cache_dir}"
 
+file_sum="$(getRgbaSum "${file_name}")"
+
+temp_file="$(mktemp "${temp_dir}/png-XXXXXXXX.png")"
 cp -a --reflink=auto "${file_name}" "${temp_file}"
+
 oxipng --opt 0 --interlace 0 --strip all "${temp_file}"
-convert "${temp_file}" "${rgba_file}"
-file_sum=$(getSum "${rgba_file}")
+checkFile "${temp_file}"
+
 cache_file="$(find "${cache_basedir}" -type f -name "${file_sum}" | tail -n1)"
 new_cache_file="${cache_dir}/${file_sum}"
 
 echo "file sum: ${file_sum}"
-echo "cache file ${cache_file}"
+echo "cache file: ${cache_file}"
 
 if [ -f "${cache_file}" ]
 then
+	if ! checkFile "${cache_file}"
+	then
+		rm "${cache_file}"
+	fi
+
 	echo "already bruteforced"
 
 	if [ "${file_name}" -ot "${cache_file}" ]
@@ -144,83 +218,84 @@ then
 	fi
 
 	cp -a --reflink=auto "${cache_file}" "${file_name}"
-else
+fi
+
+if [ ! -f "${cache_file}" ]
+then
 	convert "${temp_file}" +set comment -define png:exclude-chunks=date "${temp_file}"
+	checkFile "${temp_file}"
+
+	crush_files=()
 
 	if "${do_pngcrush}"
 	then
-		crush_file="$(mktemp "${temp_dir}/crushed-XXXXXXXX")"
-		pngcrush "${temp_file}" "${crush_file}" || true
-
+		crush_file="$(mktemp "${temp_dir}/pngcrush-XXXXXXXX.png")"
 		# It can happen that pngcrush fails but doesn't return
-		# an error code and write an empty file, so we should
-		# not use that empty file as if it was the optimized one.
-		if [ "$(du -b "${crush_file}" | cut -f1 -d$'\t')" = '0' ]
-		then
-			rm "${crush_file}"
-		else
-			useOrDeleteIfSmaller "${crush_file}" "${temp_file}"
-		fi
+		# an error code and write an empty file or even return
+		# an invalid file.
+		pngcrush "${temp_file}" "${crush_file}" || true
+		preferFile "${crush_file}" "${temp_file}"
 	fi
 
 	if "${do_oxipng}"
 	then
-		# do not use oxipng --alpha
-		# alpha channel may still be used as a standalone component
-		crush_file="$(mktemp "${temp_dir}/crushed-XXXXXXXX")"
+		crush_file="$(mktemp "${temp_dir}/oxipng-XXXXXXXX.png")"
+		# Do not use `oxipng --alpha` because the alpha channel
+		# may still be used as a standalone component.
 		oxipng --opt 6 --strip all --out "${crush_file}" "${temp_file}"
-		useOrDeleteIfSmaller "${crush_file}" "${temp_file}"
+		preferFile "${crush_file}" "${temp_file}"
 	fi
 
 	if "${do_oxipng_zopfli}"
 	then
-		crush_file="$(mktemp "${temp_dir}/crushed-XXXXXXXX")"
+		crush_file="$(mktemp "${temp_dir}/oxipng-zopfli-XXXXXXXX.png")"
 		oxipng --opt 6 --zopfli --strip all --out "${crush_file}" "${temp_file}"
-		useOrDeleteIfSmaller "${crush_file}" "${temp_file}"
+		preferFile "${crush_file}" "${temp_file}"
+	fi
+
+	if "${do_advpng}"
+	then
+		advpng_iter=1000
+		crush_file="$(mktemp "${temp_dir}/advpng-XXXXXXXX.png")"
+		# It can happens sometime that advpng fails.
+		# > Error reading the signature on file.png [at void throw_png_error():pngex.h:37]
+		advpng -z -3 -i "${advpng_iter}" "${crush_file}" || true
+		preferFile "${crush_file}" "${temp_file}"
+	fi
+
+	if "${do_pngwolf}"
+	then
+		pngwolf_stagnate=1000
+
+		crush_file="$(mktemp "${temp_dir}/pngwolf-XXXXXXXX.png")"
+		pngwolf --max-stagnate-time="${pngwolf_stagnate}" \
+			--in="${temp_file}" \
+			--out="${crush_file}"
+		preferFile "${crush_file}" "${temp_file}"
 	fi
 
 	if "${do_pngwolf_zopfli}"
 	then
-		advpng_iter=1000
 		pngwolf_stagnate=1000
-	#	pngwolf_stagnate=100
-	#	pngwolf_stagnate=10
-		zopfli_iter=5000
+		pngwolf_zopfli_iter=5000
 
-		# 7zip
-		# It can happens sometime that advpng fails.
-		if advpng -z -3 -i "${advpng_iter}" "${temp_file}"
-		then
-			touch -r "${file_name}" "${temp_file}"
-		fi
-
-		# GA + Zopfli
+		crush_file="$(mktemp "${temp_dir}/pngwolf-zopfli-XXXXXXXX.png")"
 		pngwolf --max-stagnate-time="${pngwolf_stagnate}" \
-			--out-deflate="zopfli,iter=${zopfli_iter},maxsplit=0,verbose=1" \
+			--out-deflate="zopfli,iter=${pngwolf_zopfli_iter},maxsplit=0,verbose=1" \
 			--in="${temp_file}" \
-			--out="${temp_file}"
-
-	#	if "${enable_zopfli}"
-	#	then
-	#		pngwolf --max-stagnate-time=1 \
-	#			--out-deflate=zopfli,iter=5000,maxsplit=0,verbose=1 \
-	#			--in="${temp_file}" \
-	#			--out="${temp_file}"
-	#	fi
+			--out="${crush_file}"
+		preferFile "${crush_file}" "${temp_file}"
 	fi
 
 	touch -r "${file_name}" "${temp_file}"
 
-	if isSmaller "${temp_file}" "${file_name}"
-	then
-		cp -a "${temp_file}" "${file_name}"
-	fi
+	preferFile "${temp_file}" "${file_name}"
 
 	cp -a --reflink=auto "${file_name}" "${new_cache_file}"
 fi
 
-rm "${temp_file}"
-rm "${rgba_file}"
+rm -f "${temp_file}"
+
 rmdir "${temp_dir}"
 
 #EOF
