@@ -195,7 +195,7 @@ preferFile () {
 
 TMPDIR="${TMPDIR-/tmp}"
 
-temp_dir="$(mktemp -d "${TMPDIR}/drt-pngrute-XXXXXXXX")"
+temp_dir="$(mktemp -d "${TMPDIR}/drt-pngbrute-XXXXXXXX")"
 
 cache_basepath="pngbrute";
 cache_basedir="$(realpath "${XDG_CACHE_HOME:-${HOME}/.cache}/${cache_basepath}")";
