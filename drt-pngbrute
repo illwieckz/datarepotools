@@ -4,25 +4,13 @@
 #
 # Author:  Thomas Debesse <dev@illwieckz.net>
 # License: ISC
-# 
+#
 
 set -u -e -o pipefail
 
 tag_name='.'
 
-# enable_zopfli='true'
-# if [ "${1}" = '-n' ]
-# then
-# 	enable_zopfli='false'
-# 	shift
-# fi
-
-if [ "${1}" = '-q' ]
-then
-	exec 1>/dev/null
-	exec 2>/dev/null
-	shift
-fi
+enable_overwrite='false'
 
 do_pngcrush='true'
 do_advpng='true'
@@ -32,105 +20,116 @@ do_oxipng_zopfli='true'
 do_pngwolf='false'
 do_pngwolf_zopfli='true'
 
-case "${1}" in
-	'-a'|'-all')
-		do_pngcrush='true'
-		do_advpng='true'
-		do_advpng_zopfli='false'
-		do_oxipng='false'
-		do_oxipng_zopfli='true'
-		do_pngwolf='false'
-		do_pngwolf_zopfli='true'
-		shift
-		;;
-	'--pngcrush')
-		do_pngcrush='true'
-		do_advpng='false'
-		do_advpng_zopfli='false'
-		do_oxipng='false'
-		do_oxipng_zopfli='false'
-		do_pngwolf='false'
-		do_pngwolf_zopfli='false'
-		shift
-		;;
-	'--advpng')
-		do_pngcrush='false'
-		do_oxipng='false'
-		do_advpng='true'
-		do_advpng_zopfli='false'
-		do_oxipng_zopfli='false'
-		do_pngwolf='false'
-		do_pngwolf_zopfli='false'
-		shift
-		;;
-	'--advpng')
-		do_pngcrush='false'
-		do_oxipng='false'
-		do_advpng='false'
-		do_advpng_zopfli='true'
-		do_oxipng_zopfli='false'
-		do_pngwolf='false'
-		do_pngwolf_zopfli='false'
-		shift
-		;;
-	'--oxipng')
-		do_pngcrush='false'
-		do_advpng='false'
-		do_advpng_zopfli='false'
-		do_oxipng='true'
-		do_oxipng_zopfli='false'
-		do_pngwolf='false'
-		do_pngwolf_zopfli='false'
-		shift
-		;;
-	'--oxipng-zopfli')
-		do_pngcrush='false'
-		do_advpng='false'
-		do_advpng_zopfli='false'
-		do_oxipng='false'
-		do_oxipng_zopfli='true'
-		do_pngwolf='false'
-		do_pngwolf_zopfli='false'
-		shift
-		;;
-	'--pngwolf')
-		do_pngcrush='false'
-		do_advpng='false'
-		do_advpng_zopfli='false'
-		do_oxipng='false'
-		do_oxipng_zopfli='false'
-		do_pngwolf='true'
-		do_pngwolf_zopfli='false'
-		shift
-		;;
-	'--pngwolf-zopfli')
-		do_pngcrush='false'
-		do_advpng='false'
-		do_advpng_zopfli='false'
-		do_oxipng='false'
-		do_oxipng_zopfli='false'
-		do_pngwolf='false'
-		do_pngwolf_zopfli='true'
-		shift
-		;;
-	*)
-		;;
-esac
-
-if [ "${1}" = '-t' ]
-then
-	shift
-	if ! [ -z "${1}" ]
-	then
-		tag_name="${1}"
-		shift
-	else 
-		printf 'ERROR: -t needs tag name\n' >&2
-		exit 1
-	fi
-fi
-
-file_name="${1}"
+while [ -n "${1:-}" ]
+do
+	case "${1}" in
+		'-q')
+			shift
+			exec 1>/dev/null
+			exec 2>/dev/null
+			;;
+		'-a'|'-all')
+			do_pngcrush='true'
+			do_advpng='true'
+			do_advpng_zopfli='false'
+			do_oxipng='false'
+			do_oxipng_zopfli='true'
+			do_pngwolf='false'
+			do_pngwolf_zopfli='true'
+			shift
+			;;
+		'--pngcrush')
+			do_pngcrush='true'
+			do_advpng='false'
+			do_advpng_zopfli='false'
+			do_oxipng='false'
+			do_oxipng_zopfli='false'
+			do_pngwolf='false'
+			do_pngwolf_zopfli='false'
+			shift
+			;;
+		'--advpng')
+			do_pngcrush='false'
+			do_oxipng='false'
+			do_advpng='true'
+			do_advpng_zopfli='false'
+			do_oxipng_zopfli='false'
+			do_pngwolf='false'
+			do_pngwolf_zopfli='false'
+			shift
+			;;
+		'--advpng')
+			do_pngcrush='false'
+			do_oxipng='false'
+			do_advpng='false'
+			do_advpng_zopfli='true'
+			do_oxipng_zopfli='false'
+			do_pngwolf='false'
+			do_pngwolf_zopfli='false'
+			shift
+			;;
+		'--oxipng')
+			do_pngcrush='false'
+			do_advpng='false'
+			do_advpng_zopfli='false'
+			do_oxipng='true'
+			do_oxipng_zopfli='false'
+			do_pngwolf='false'
+			do_pngwolf_zopfli='false'
+			shift
+			;;
+		'--oxipng-zopfli')
+			do_pngcrush='false'
+			do_advpng='false'
+			do_advpng_zopfli='false'
+			do_oxipng='false'
+			do_oxipng_zopfli='true'
+			do_pngwolf='false'
+			do_pngwolf_zopfli='false'
+			shift
+			;;
+		'--pngwolf')
+			do_pngcrush='false'
+			do_advpng='false'
+			do_advpng_zopfli='false'
+			do_oxipng='false'
+			do_oxipng_zopfli='false'
+			do_pngwolf='true'
+			do_pngwolf_zopfli='false'
+			shift
+			;;
+		'--pngwolf-zopfli')
+			do_pngcrush='false'
+			do_advpng='false'
+			do_advpng_zopfli='false'
+			do_oxipng='false'
+			do_oxipng_zopfli='false'
+			do_pngwolf='false'
+			do_pngwolf_zopfli='true'
+			shift
+			;;
+		'-t')
+			shift
+			if [ -n "${1:-}" ]
+			then
+				tag_name="${1}"
+				shift
+			else
+				printf 'ERROR: -t needs tag name\n' >&2
+				exit 1
+			fi
+			;;
+		'-f')
+			enable_overwrite='true'
+			shift
+			;;
+		*)
+			file_name="${1}"
+			shift
+			break
+			;;
+	esac
+done
 
 [ -z "${file_name}" ] && exit
 [ ! -f "${file_name}" ] && exit
@@ -143,6 +142,20 @@ isSmaller () {
 }
 
 useOrDeleteIfSmaller () {
+	if [ "$(du -b "${1}" | cut -f1 -d$'\t')" = '0' ]
+	then
+		printf 'WARNING: empty file: %s\n' "${1}"
+		rm "${1}"
+		return
+	fi
+
+	if ! oxipng --opt 0 --interlace 0 --strip all "${1}"
+	then
+		printf 'WARNING: broken file: %s\n' "${1}"
+		rm "${1}"
+		return
+	fi
+
 	if isSmaller "${1}" "${2}"
 	then
 		touch -r "${2}" "${1}"
@@ -150,8 +163,6 @@ useOrDeleteIfSmaller () {
 	fi
 
 	rm "${1}"
-
-	sync
 }
 
 getSum () {
@@ -219,6 +230,16 @@ new_cache_file="${cache_dir}/${file_sum}"
 
 echo "file sum: ${file_sum}"
 echo "cache file: ${cache_file}"
+
+if "${enable_overwrite}"
+then
+	if  [ -f "${cache_file}" ]
+	then
+		echo 'deleting previously cached file'
+		find "${cache_basedir}" -type f -name "${file_sum}" -exec rm -v {} \;
+		cache_file=''
+	fi
+fi
 
 if [ -f "${cache_file}" ]
 then
